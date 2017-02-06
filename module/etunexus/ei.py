@@ -98,13 +98,23 @@ class BandCategory(dict):
         id (int): The auto id
     """
 
-    def __init__(self):
+    def __init__(self, name, bands=None, id=None):
+        assert name
+        if bands is None:
+            bands = []
+        assert isinstance(bands, list)
         super(BandCategory, self).__init__({
+            'name': name,
+            'bands': [x if isinstance(x, Band) else Band.from_dict(x) for x in bands],
+            'id': id
         })
+
+    def to_simple(self):
+        return {'name': self['name']}
 
     @classmethod
     def from_dict(cls, dict_obj):
-        return cls()
+        return cls(dict_obj['name'], dict_obj.get('bands'), dict_obj.get('id'))
 
 
 class EI3(BaseApp):
@@ -119,7 +129,7 @@ class EI3(BaseApp):
         """ Constructor """
 
         api_base = api_base if api_base else self.__API_BASE
-        super(EI3, self).__init__(cas, ER3.__APP_NAME,
+        super(EI3, self).__init__(cas, EI3.__APP_NAME,
                                   api_host=host if host else self.__HOST,
                                   api_base=api_base if api_base else self.__API_BASE,
                                   shiro_cas_base=shiro_cas_base if shiro_cas_base else self.__SHIRO_CAS_BASE)
@@ -127,23 +137,25 @@ class EI3(BaseApp):
     # Band category
     def get_band_categories(self):
         res = self.request_get('/bandcategory')
-        return [BandCategory.from_dict(x) for x in res]
+        return [BandCategory.from_dict(x) for x in res['data']]
 
     def add_band_category(self, band_category):
         assert band_category and isinstance(band_category, BandCategory)
-        res = self.request_post_form('/bandcategory', band_category)
-        return BandCategory.from_dict(res)
+        res = self.request_post_form('/bandcategory', band_category.to_simple())
+        self._logger.debug(res)
+        return BandCategory.from_dict(res['data'])
 
     def update_band_category(self, band_category):
         assert band_category and isinstance(band_category, BandCategory)
         band_category_id = band_category['id']
         assert band_category_id
-        res = self.request_post_form('/bandcategory/{0}'.format(band_category_id), band_category)
-        return BandCategory.from_dict(res)
+        res = self.request_post_form('/bandcategory/{0}'.format(band_category_id), band_category.to_simple())
+        return BandCategory.from_dict(res['data'])
 
     def del_band_category(self, band_category):
         assert band_category
-        band_category_id = bandcategory['id'] if isinstance(band_category, BandCategory) else band_category
+        band_category_id = band_category['id'] if isinstance(band_category, BandCategory) else band_category
         assert band_category_id
-        return self.request_del('/bandcategory/{0}'.format(band_category_id))
+        res = self.request_del('/bandcategory/{0}'.format(band_category_id))
+        return res['data']
 

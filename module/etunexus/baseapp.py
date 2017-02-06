@@ -3,6 +3,7 @@
 import urllib
 import urllib2
 import json
+import codecs
 import logging
 import traceback
 
@@ -152,11 +153,11 @@ class BaseApp(object):
         """ Logout service with cleaning granted Service Ticket """
         del self._st
 
-    def _request(self, api, data=None, data_serialier=None, file=None, headers=None, method=None):
+    def _request(self, api, data=None, data_serializer=None, file=None, headers=None, method=None):
         if data:
             assert isinstance(data, dict)
-        if data_serialier is None:
-            data_serialier = json.dumps
+        if data_serializer is None:
+            data_serializer = json.dumps
         self._check_login()
 
         # Preparing data and headers if required
@@ -169,7 +170,7 @@ class BaseApp(object):
         final_data = None
         if data:
             if file:
-                final_data = dict([(k, str(v)) for k, v in data.iteritems() if v is not None])
+                final_data = dict([(k, json.dumps(v) if isinstance(v, dict) else str(v)) for k, v in data.iteritems() if v is not None])
                 # [IMPORTANT] Force transform all values to str while MultipartPostHandler append it with str directly.
                 # /Library/Python/2.7/site-packages/MultipartPostHandler-0.1.0-py2.7.egg/MultipartPostHandler.pyc in multipart_encode(vars, files, boundary, buffer)
                 # 91             buffer += '--%s\r\n' % boundary
@@ -183,7 +184,7 @@ class BaseApp(object):
                 final_data.update({'file': open(file, 'rb')})
                 self._logger.debug('Upload file. The content length is calculated before sending request. Not set here.')
             else:
-                final_data = data_serialier(data)
+                final_data = data_serializer(data)
                 self._logger.debug('Pure post data. Set content length to %d' % len(final_data))
                 final_headers['Content-Length'] = len(final_data)
         else:
@@ -212,11 +213,17 @@ class BaseApp(object):
     def request_post(self, api, data, headers=None):
         return self._request(api, data=data, headers=headers)
 
+    @staticmethod
+    def urlencode_serializer(dict_obj):
+        filtered_obj = filter(lambda y: y[1] is not None, dict_obj.iteritems())
+        filtered_obj = [(x, codecs.encode(y,'utf-8')) if isinstance(y, unicode) else (x, y) for (x, y) in filtered_obj]
+        return urllib.urlencode(filtered_obj)
+
     def request_post_form(self, api, data, headers=None):
         headers = {} if headers is None else headers.copy()
         headers.update(self.__post_forms_headers)
         return self._request(api, data=data, headers=headers,
-                             data_serialier=lambda x: urllib.urlencode(x))
+                             data_serializer=self.urlencode_serializer)
 
     def request_del(self, api, headers=None):
         return self._request(api, headers=headers, method='DELETE')
