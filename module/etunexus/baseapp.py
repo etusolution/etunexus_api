@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 import urllib
 import urllib2
 import json
@@ -224,6 +225,9 @@ class BaseApp(object):
         headers.update(self.__post_forms_headers)
         return self._request(api, data=data, headers=headers,
                              data_serializer=self.urlencode_serializer)
+
+    def request_post_multipart(self, api, data, headers=None):
+        return self._request(api, data=data, file=os.devnull, headers=headers)
 
     def request_del(self, api, headers=None):
         return self._request(api, headers=headers, method='DELETE')

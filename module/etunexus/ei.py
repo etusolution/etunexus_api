@@ -2,7 +2,7 @@
 
 from baseapp import BaseApp
 from enum import *
-
+from emc import DataSource
 
 class BandGene(dict):
     """ Structure for a gene-based band
@@ -18,7 +18,7 @@ class BandGene(dict):
         assert gene_id and cid and operator and operand
         super(BandGene, self).__init__({
             'geneId': gene_id,
-            'cid': cid,
+            'cid': cid['id'] if isinstance(cid, DataSource) else cid,
             'operator': operator,
             'operand': operand
         })
@@ -52,13 +52,14 @@ class Band(dict):
     """ Structure for a band
     
     Fields:
+        categoryId (int): The band category of the band belongs to
         name (str): Band name
         description (str): Band description
-        needRefresh (bool): Need to refresh the band or not
         type (str): Band type, refer to 'BandType' for valid values
         targetGene (obj): Gene setting if type=gene or type=fixedgene
         targetBand (obj): Combine bands if type=combine
 
+        needRefresh (bool): Need to refresh the band or not
         snapshotInfo (obj): Snapshot info (if a snap-shot band), or None for pure band
 
         id (int): The auto id
@@ -66,10 +67,12 @@ class Band(dict):
         updateTime (long): The band update time in Epoch (milliseconds)
     """
 
-    def __init__(self, name, description, need_refresh,
-                 type, target_gene=None, target_band=None, snapshot_info=None,
+    def __init__(self, category, name, description,
+                 type, target_gene=None, target_band=None,
+                 need_refresh=True, snapshot_info=None,
                  id=None, amount=None, update_time=None):
         super(Band, self).__init__({
+            'categoryId': category['id'] if isinstance(category, BandCategory) else category,
             'name': name,
             'description': description,
             'needRefresh': need_refresh,
@@ -84,9 +87,17 @@ class Band(dict):
 
     @classmethod
     def from_dict(cls, dict_obj):
-        return cls(dict_obj['name'], dict_obj['description'], dict_obj['needRefresh'],
+        return cls(dict_obj['categoryId'], dict_obj['name'], dict_obj['description'],
                    dict_obj['type'], dict_obj.get('targetGene'), dict_obj.get('targetBand'),
-                   dict_obj.get('snapshotInfo'), dict_obj.get('id'), dict_obj.get('amount'), dict_obj.get('updateTime'))
+                   dict_obj['needRefresh'], dict_obj.get('snapshotInfo'),
+                   dict_obj.get('id'), dict_obj.get('amount'), dict_obj.get('updateTime'))
+
+    @classmethod
+    def from_dict_with_ext_cat_id(cls, dict_obj, category_id):
+        return cls(category_id, dict_obj['name'], dict_obj['description'],
+                   dict_obj['type'], dict_obj.get('targetGene'), dict_obj.get('targetBand'),
+                   dict_obj['needRefresh'], dict_obj.get('snapshotInfo'),
+                   dict_obj.get('id'), dict_obj.get('amount'), dict_obj.get('updateTime'))
 
 
 class BandCategory(dict):
@@ -105,7 +116,7 @@ class BandCategory(dict):
         assert isinstance(bands, list)
         super(BandCategory, self).__init__({
             'name': name,
-            'bands': [x if isinstance(x, Band) else Band.from_dict(x) for x in bands],
+            'bands': [x if isinstance(x, Band) else Band.from_dict_with_ext_cat_id(x, id) for x in bands],
             'id': id
         })
 
@@ -159,3 +170,32 @@ class EI3(BaseApp):
         res = self.request_del('/bandcategory/{0}'.format(band_category_id))
         return res['data']
 
+    # Band #
+    def add_band(self, band, file_path=None):
+        assert band and isinstance(band, Band)
+        band_category_id = band['categoryId']
+        if file_path:
+            assert band['type'] == BandType.UPLOAD
+            res = self.request_upload('/band', band, file_path)
+        else:
+            res = self.request_post_multipart('/band', band)
+        return Band.from_dict_with_ext_cat_id(res['data'], band_category_id)
+
+    def update_band(self, band, file_path=None):
+        assert band and isinstance(band, Band)
+        band_category_id = band['categoryId']
+        band_id = band['id']
+        assert band_id
+        if file_path:
+            assert band['type'] == BandType.UPLOAD
+            res = self.request_upload('/band/{0}'.format(band_id), band, file_path)
+        else:
+            res = self.request_post_multipart('/band/{0}'.format(band_id), band)
+        return Band.from_dict_with_ext_cat_id(res['data'], band_category_id)
+
+    def del_band(self, band):
+        assert band
+        band_id = band['id'] if isinstance(band, Band) else band
+        assert band_id
+        res = self.request_del('/band/{0}'.format(band_id))
+        return res['data']

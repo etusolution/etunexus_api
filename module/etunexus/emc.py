@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import time
+import json
+
 from baseapp import BaseApp
 from enum import *
 
@@ -162,7 +165,7 @@ class DataSource(dict):
         upload (object): An Upload object if type is 'UPLOAD'
     """
     # TODO: importer, fetch, upload not supported yet
-    def __init__(self, name, display_name, app_ids, content_type, type, id=None, group_id=None):
+    def __init__(self, name, display_name, app_ids, content_type, id=None, group_id=None):
         super(DataSource, self).__init__({
             'name': name,
             'displayName': display_name,
@@ -196,6 +199,87 @@ class DataSource(dict):
             new_obj.init_event_collector_from_dict(dict_obj['eventCollector'])
 
         return new_obj
+
+
+class ExporterExtraSchema(dict):
+    """ Structure for Extra Schema in Exporter Setting
+
+    Fields:
+        name (str): Name/field of the schema
+        type (str): Type of the schema, e.g. string, int
+        link (str): The tuple key to explode
+    """
+
+    def __init__(self, name, type, link):
+        assert name and type and link is not None
+        super(ExporterExtraSchema, self).__init__({
+            'name': name,
+            'type': type,
+            'link': link
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        return cls(dict_obj['name'], dict_obj['type'], dict_obj['link'])
+
+
+class ExporterSetting(dict):
+    """ Structure for Exporter setting
+
+    Fields:
+        enabled (bool): The exporter is enabled or not
+        initalConvetTime (long): The initial conversion time in Epoch (milliseconds). Default: now
+        tupleKey (str): The tuple key. Default: ptuple
+        extraSchema (object): The extra schema
+        parsingFormat (str): The input data format. Default: NginxPlusLogParserDriver
+        baseSchema (object); The base/default schema
+        updateTime (long): The latest data export time in Epoch (milliseconds)
+
+    NOTE:
+        initalConvetTime is the legacy typo of "initialConversionTime".
+    """
+    def __init__(self, enabled, initial_convert_time=None,
+                 tuple_key=None, extra_schema=None,
+                 parsing_format=None, base_schema=None, update_time=None):
+        assert enabled is not None
+        if initial_convert_time is None:
+            initial_convert_time = long(time.mktime(time.localtime())*1000)
+        if not tuple_key:
+            tuple_key = 'ptuple'
+        if not extra_schema:
+            extra_schema = []
+        if not parsing_format:
+            parsing_format = 'NginxPlusLogParserDriver'
+        if not base_schema:
+            base_schema = []
+
+        extra_schema_list = [x if isinstance(x, ExporterExtraSchema) else ExporterExtraSchema.from_dict(x) for x in extra_schema]
+        extra_schema_str = json.dumps(extra_schema_list)
+
+        base_schema_list = [x if isinstance(x, ExporterExtraSchema) else ExporterExtraSchema.from_dict(x) for x in base_schema]
+        base_schema_str = json.dumps(base_schema_list)
+
+        super(ExporterSetting, self).__init__({
+            'enabled': enabled,
+            'initalConvetTime': long(initial_convert_time),
+            'tupleKey': tuple_key,
+            'extraSchema': extra_schema_str,
+            'parsingFormat': parsing_format,
+            'baseSchema': base_schema_str,
+            'updateTime': update_time
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        extra_schema = None
+        if 'extraSchema' in dict_obj:
+            extra_schema = json.loads(dict_obj['extraSchema'])
+        base_schema = None
+        if 'baseSchema' in dict_obj:
+            base_schema = json.loads(dict_obj['baseSchema'])
+        return cls(dict_obj['enabled'], dict_obj.get('initalConvetTime'),
+                   dict_obj.get('tupleKey'), extra_schema,
+                   dict_obj.get('parsingFormat'), base_schema, dict_obj.get('updateTime'))
 
 
 class EMC2(BaseApp):
@@ -242,13 +326,15 @@ class EMC2(BaseApp):
         res = self.request_get('/user/me')
         return User.from_dict(res)
 
-    def get_users(self, group_id):
-        assert group_id
+    def get_users(self, group):
+        assert group
+        group_id = group['id'] if isinstance(group, Group) else group
         res = self.request_get('/group/{0}/user'.format(group_id))
         return [User.from_dict(x) for x in res]
 
-    def add_user(self, group_id, user):
-        assert group_id and user and isinstance(user, User)
+    def add_user(self, group, user):
+        assert group and user and isinstance(user, User)
+        group_id = group['id'] if isinstance(group, Group) else group
         res = self.request_post('/group/{0}/user'.format(group_id), user)
         return User.from_dict(res)
 
@@ -294,13 +380,15 @@ class EMC2(BaseApp):
         return AppRole.from_dict(res)
 
     # Data source #
-    def get_data_sources(self, group_id):
-        assert group_id
+    def get_data_sources(self, group):
+        assert group
+        group_id = group['id'] if isinstance(group, Group) else group
         res = self.request_get('/group/{0}/data-source'.format(group_id))
         return [DataSource.from_dict(x) for x in res]
 
-    def add_data_source(self, group_id, data_source):
+    def add_data_source(self, group, data_source):
         assert data_source and isinstance(data_source, DataSource)
+        group_id = group['id'] if isinstance(group, Group) else group
         res = self.request_post('/group/{0}/data-source'.format(group_id), data_source)
         return DataSource.from_dict(res)
 
@@ -316,3 +404,17 @@ class EMC2(BaseApp):
         data_source_id = data_source['id'] if isinstance(data_source, DataSource) else data_source
         assert data_source_id
         return self.request_del('/data-source/{0}'.format(data_source_id))
+
+    # Exporter setting #
+    def get_exporter_setting(self, data_source):
+        assert data_source
+        source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
+        res = self.request_get('/data-source/{0}/exporter'.format(source_id))
+        return ExporterSetting.from_dict(res)
+
+    def update_exporter_setting(self, data_source, exporter_setting):
+        assert data_source and  exporter_setting and isinstance(exporter_setting, ExporterSetting)
+        source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
+        assert source_id
+        res = self.request_post('/data-source/{0}/exporter'.format(source_id), exporter_setting)
+        return ExporterSetting.from_dict(res)

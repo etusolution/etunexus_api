@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from baseapp import BaseApp
-from emc import DataSource
+from emc import Group, DataSource
 from enum import *
 
 
@@ -88,6 +88,41 @@ class Alg_ITEM_BASED_CF(AlgInstance):
         assert dict_obj and dict_obj['setting']
         setting = dict_obj['setting']
         return cls(dict_obj['weight'], setting['DATASOURCE'], setting['TIMERANGE'], setting['action'])
+
+
+class Alg_RANKING(AlgInstance):
+    """ Structure of ranking algorithm
+
+    Fields:
+        (As 'setting' in AlgInstance)
+        id (str): 'RANKING'
+        DATASOURCE (object): A emc.DataSource instance, or at least a dict with 'id' and 'name'
+        TIMERANGE (int): The data time range to calculate
+        actionList (list): A list of event actions to calculate, refer to 'EventAction' to samples
+        addNonCategoryRec (bool): Generate category-independent recommendation list or not
+    """
+
+    def __init__(self, weight, data_source, time_range, actions, gen_non_category_rec=True, delimiter=None):
+        assert data_source and time_range and actions
+        if delimiter is None:
+            delimiter = ','
+
+        setting = {
+            'id': LogicAlgorithmId.RANKING,
+            'DATASOURCE': {'id': data_source['id'], 'name': data_source['name']},
+            'TIMERANGE': time_range,
+            'actionList': actions,
+            'addNonCategoryRec': str(bool(gen_non_category_rec)).lower(),
+            'delimiter': delimiter
+        }
+        super(Alg_RANKING, self).__init__(LogicAlgorithmId.RANKING, weight, setting)
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj and dict_obj['setting']
+        setting = dict_obj['setting']
+        return cls(dict_obj['weight'], setting['DATASOURCE'], setting['TIMERANGE'], setting['actionList'],
+                   setting.get('addNonCategoryRec'), setting.get('delimiter'))
 
 
 class UserFilter(dict):
@@ -276,12 +311,15 @@ class ER3(BaseApp):
                                   shiro_cas_base=shiro_cas_base if shiro_cas_base else self.__SHIRO_CAS_BASE)
 
     # Logic #
-    def get_logics(self, group_id):
+    def get_logics(self, group):
+        assert group
+        group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_get('/group/{0}/logic'.format(group_id))
         return [Logic.from_dict(x) for x in res]
 
-    def add_logic(self, group_id, logic):
-        assert group_id and logic and isinstance(logic, Logic)
+    def add_logic(self, group, logic):
+        assert group and logic and isinstance(logic, Logic)
+        group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_post('/group/{0}/logic'.format(group_id), logic)
         return Logic.from_dict(res)
 
@@ -299,13 +337,15 @@ class ER3(BaseApp):
         return self.request_del('/logic/{0}'.format(logic_id))
 
     # Campaign #
-    def get_campaigns(self, group_id):
-        assert group_id
+    def get_campaigns(self, group):
+        assert group
+        group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_get('/group/{0}/campaign'.format(group_id))
         return [Campaign.from_dict(x) for x in res]
 
-    def add_campaign(self, group_id, campaign):
-        assert group_id and campaign and isinstance(campaign, Campaign)
+    def add_campaign(self, group, campaign):
+        assert group and campaign and isinstance(campaign, Campaign)
+        group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_post('/group/{0}/campaign', campaign)
         return Campaign.from_dict(res)
 
@@ -318,13 +358,14 @@ class ER3(BaseApp):
 
     def del_campaign(self, campaign):
         assert campaign
-        campaign_id = campaign['id'] if isinstance(campaign, Campaign) else campaign
+        campaign_id = campaign['id'] if isinstance(campaign, Campaign) else int(campaign)
         assert campaign_id
         return self.request_del('/campaign/{0}'.format(campaign_id))
 
     # User filter #
-    def get_user_filters(self, group_id):
-        assert group_id
+    def get_user_filters(self, group):
+        assert group
+        group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_get('/group/{0}/userfilter'.format(group_id))
         return [UserFilter.from_dict(x) for x in res]
 
@@ -342,7 +383,7 @@ class ER3(BaseApp):
 
     def del_user_filter(self, user_filter):
         assert user_filter
-        user_filter_id = user_filter['id'] if isinstance(user_filter, UserFilter) else user_filter
+        user_filter_id = user_filter['id'] if isinstance(user_filter, UserFilter) else int(user_filter)
         assert user_filter_id
         return self.request_del('/userfilter/{0}'.format(user_filter_id))
 
@@ -366,6 +407,6 @@ class ER3(BaseApp):
 
     def del_layout(self, layout):
         assert layout
-        layout_id = layout['id'] if isinstance(layout, Layout) else layout
+        layout_id = layout['id'] if isinstance(layout, Layout) else int(layout)
         assert layout_id
         return self.request_del('/layout/{0}'.format(layout_id))

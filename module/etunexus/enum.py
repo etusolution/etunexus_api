@@ -77,28 +77,28 @@ class BandType(object):
 
 class BandGeneOperator(object):
     """ Enumeration of operators for gene-based bands """
-    LT = 'LT',
-    LE = 'LE',
-    EQ = 'EQ',
-    GE = 'GE',
-    GT = 'GT',
-    IN = 'IN',
-    BETWEEN = 'BETWEEN',
+    LT = 'LT'
+    LE = 'LE'
+    EQ = 'EQ'
+    GE = 'GE'
+    GT = 'GT'
+    IN = 'IN'
+    BETWEEN = 'BETWEEN'
     # for list
-    INC = 'INC',
-    INCALL = 'INCALL',
-    INCNONE = 'INCNONE',
+    INC = 'INC'
+    INCALL = 'INCALL'
+    INCNONE = 'INCNONE'
     # for range list
-    RINC = 'RINC',
-    RINCALL = 'RINCALL',
-    RINCNONE = 'RINCNONE',
+    RINC = 'RINC'
+    RINCALL = 'RINCALL'
+    RINCNONE = 'RINCNONE'
     # partial comparison for listKINC = 'KINC'
-    KINCALL = 'KINCALL',
+    KINCALL = 'KINCALL'
     KINCNONE = 'KINCNONE'
 
 
 class BandCombineOperator(object):
     """ Enumeration of operators for combined bands """
-    UNION = 'UNION',
-    INTERSECT = 'INTERSECT',
+    UNION = 'UNION'
+    INTERSECT = 'INTERSECT'
     EXCEPT = 'EXCEPT'
