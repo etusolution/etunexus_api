@@ -195,7 +195,7 @@ class BaseApp(object):
         req = urllib2.Request(url, data=final_data, headers=final_headers)
         if method:
             req.get_method = lambda: method
-        self._logger.info('%s %s' % (req.get_method(), url))
+        self._logger.debug('%s %s' % (req.get_method(), url))
         self._logger.debug('Request header: %s' % str(req.headers))
         self._logger.debug("Request has body: %s. Request body: %s" %
                             (('Yes' if req.has_data() else 'No'), req.get_data()))

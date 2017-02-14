@@ -66,7 +66,7 @@ class Group(dict):
 
     @classmethod
     def from_dict(cls, dict_obj):
-        return cls(dict_obj['name'], dict_obj['displayName'], dict_obj.get('id'), dict_obj['createTime'])
+        return cls(dict_obj['name'], dict_obj['displayName'], dict_obj.get('id'), dict_obj.get('createTime'))
 
 
 class UserRole(dict):
@@ -114,7 +114,7 @@ class User(dict):
             mail = ''
         super(User, self).__init__({
             'name': name,
-            'diplayName': display_name,
+            'displayName': display_name,
             'password': password,
             'department': department,
             'mail': mail,
@@ -317,7 +317,7 @@ class EMC2(BaseApp):
 
     def del_group(self, group):
         assert group
-        group_id = group['id'] if isinstance(group, Group) else group
+        group_id = group['id'] if isinstance(group, Group) else int(group)
         assert group_id
         return self.request_del('/group/{0}'.format(group_id))
 
@@ -328,13 +328,13 @@ class EMC2(BaseApp):
 
     def get_users(self, group):
         assert group
-        group_id = group['id'] if isinstance(group, Group) else group
+        group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_get('/group/{0}/user'.format(group_id))
         return [User.from_dict(x) for x in res]
 
     def add_user(self, group, user):
         assert group and user and isinstance(user, User)
-        group_id = group['id'] if isinstance(group, Group) else group
+        group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_post('/group/{0}/user'.format(group_id), user)
         return User.from_dict(res)
 
@@ -346,12 +346,12 @@ class EMC2(BaseApp):
 
     def del_user(self, user):
         assert user
-        user_id = user['id'] if isinstance(user, User) else user
+        user_id = user['id'] if isinstance(user, User) else int(user)
         return self.request_del('/user/{0}'.format(user_id))
 
     def change_user_password(self, user, password):
         assert user and password
-        user_id = user['id'] if isinstance(user, User) else user
+        user_id = user['id'] if isinstance(user, User) else int(user)
         params = {
             'password': password
         }
@@ -382,13 +382,13 @@ class EMC2(BaseApp):
     # Data source #
     def get_data_sources(self, group):
         assert group
-        group_id = group['id'] if isinstance(group, Group) else group
+        group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_get('/group/{0}/data-source'.format(group_id))
         return [DataSource.from_dict(x) for x in res]
 
     def add_data_source(self, group, data_source):
         assert data_source and isinstance(data_source, DataSource)
-        group_id = group['id'] if isinstance(group, Group) else group
+        group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_post('/group/{0}/data-source'.format(group_id), data_source)
         return DataSource.from_dict(res)
 
@@ -401,7 +401,7 @@ class EMC2(BaseApp):
 
     def del_data_source(self, data_source):
         assert data_source
-        data_source_id = data_source['id'] if isinstance(data_source, DataSource) else data_source
+        data_source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
         assert data_source_id
         return self.request_del('/data-source/{0}'.format(data_source_id))
 
