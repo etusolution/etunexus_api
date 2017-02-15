@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 import json
+import getpass
 
 from etunexus.cas import *
 from etunexus.emc import *
@@ -63,7 +64,7 @@ class AuthInfo():
             logger.info('\n[Input login info]')
             self.group = promise_prompt('Group: ')
             self.user = promise_prompt('User: ')
-            self.password = promise_prompt('Password: ')
+            self.password = getpass.getpass('Password: ')
             return True
         except KeyboardInterrupt, ki:
             return False
