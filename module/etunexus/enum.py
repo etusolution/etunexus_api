@@ -102,3 +102,25 @@ class BandCombineOperator(object):
     UNION = 'UNION'
     INTERSECT = 'INTERSECT'
     EXCEPT = 'EXCEPT'
+
+
+class GeneType(object):
+    """ Enumeration of gene types. It is also for fixed (external) gene """
+    SET = 'set'
+    DATE = 'date'
+    PERCENT = 'percent'
+    HOURS = 'hours'
+    SET_KEYWORD = 'set_keyword'
+    NUMBER_TIME = 'number_time'
+    NUMBER = 'number'
+    WEEKDAYS = 'weekdays'
+    RANGE_DATE = 'range_date'
+
+
+class GeneChartType(object):
+    """ Enumeration of gene chart types. It is also for fixed (external) gene """
+    SEMIDONUT = 'semidonut'
+    BAR = 'bar'
+    LINE = 'line'
+    COLUMN = 'column'
+    HEATMAP_DATE = 'heatmap_date'
