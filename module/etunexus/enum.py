@@ -124,3 +124,11 @@ class GeneChartType(object):
     LINE = 'line'
     COLUMN = 'column'
     HEATMAP_DATE = 'heatmap_date'
+
+
+class EIStatisticsItem(object):
+    """ Enumeration of EI statistics item name """
+    DOWNLOAD_UID_LIST = 'downloadUidList'
+    ADD_BAND = 'addBand'
+    UPDATE_BAND = 'updateBand'
+    BAND_COUNT = 'bandCount'

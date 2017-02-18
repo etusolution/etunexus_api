@@ -43,7 +43,7 @@ def promise_prompt(prompt, default=None):
 
 
 class AuthInfo():
-    """ The abstract base class for command handlers """
+    """ Keep the authentication info """
 
     def __init__(self):
         self.cas_host = DEF_CAS_HOST
@@ -123,6 +123,17 @@ def add_new_user(emc2, group):
     if len(matched_users) > 0:
         logger.info('Existing user. No need to add new user.')
         user = matched_users[0]
+
+        # Check the user is ER-authorized
+        user_roles = user['roles']
+        if len(filter(lambda x: x['appId'] == AppId.ER, user_roles)) == 0:
+            logger.info('But the user is not ER-authorized. Adding the authorization...')
+            user['roles'].append(UserRole(AppRoleName.VIEWER, AppId.ER))
+            emc2.update_user(user)
+            logger.info('Done.')
+        else:
+            logger.info('The user is also ER-authorized.')
+
     else:
         user_password = 'etu_%s' % group['name']
         user_display = group['displayName']
@@ -143,6 +154,17 @@ def add_new_data_source(emc2, group):
     if len(matched_dss) > 0:
         logger.info('Existing data source. No need to add new user.')
         ds = matched_dss[0]
+
+        # Check the data source is ER-authorized
+        ds_app_ids = ds['appIds']
+        if len(filter(lambda x: x == AppId.ER, ds_app_ids)) == 0:
+            logger.info('But the data source is not ER-authorized. Adding the authorization...')
+            ds['appIds'].append(AppId.ER)
+            emc2.update_data_source(ds)
+            logger.info('Done.')
+        else:
+            logger.info('The data source is also ER-authorized.')
+
     else:
         ds_display = u'%s 行為資料' % group['displayName']
         ds_app_ids = [AppId.EMC, AppId.ER]
@@ -153,8 +175,10 @@ def add_new_data_source(emc2, group):
         ds = emc2.add_data_source(group, ds)
         logger.info('Done.')
 
-    exporter_setting = ExporterSetting(True)
-    emc2.update_exporter_setting(ds, exporter_setting)
+        logger.info('Setting exporter...')
+        exporter_setting = ExporterSetting(True)
+        emc2.update_exporter_setting(ds, exporter_setting)
+        logger.info('Done.')
 
     return ds
 
@@ -196,12 +220,12 @@ def add_new_logics(er3, group, data_source):
     ]
     for logic in new_logics:
         exist_logic = filter(lambda x: x['name'] == logic['name'], logics)
-        if len(exist_logic) == 0:
+        if len(exist_logic) > 0:
+            logger.info('Logic (%s) already exist. No need to add new.' % logic['name'])
+        else:
             logger.info('Adding logic (%s)...' % logic['name'])
             er3.add_logic(group, logic)
             logger.info('Done.')
-        else:
-            logger.info('Logic (%s) already exist. No need to add new.' % logic['name'])
 
 
 def main():
@@ -222,8 +246,9 @@ def main():
         cas.login()
         emc2.login()
         er3.login()
-    except:
+    except Exception, e:
         logger.error('Failed to connect to EMC or ER server. Please try again later.')
+        logger.error('Error message: ' + str(e))
         return 2
 
     logger.info('Done.')
@@ -241,8 +266,9 @@ def main():
                 break
     except KeyboardInterrupt, ki:
         return 1
-    except:
+    except Exception, e:
         logger.error('Failed to complete the process. Please check the error and try again.')
+        logger.error('Error message: ' + str(e))
         return 2
 
 # End of main

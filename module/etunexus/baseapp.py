@@ -154,6 +154,17 @@ class BaseApp(object):
         """ Logout service with cleaning granted Service Ticket """
         del self._st
 
+    @staticmethod
+    def _convert_value(v):
+        if isinstance(v, dict):
+            return json.dumps(v)
+        elif isinstance(v, str):
+            return v
+        elif isinstance(v, unicode):
+            return v.encode('utf-8')
+        else:
+            return str(v)
+
     def _request(self, api, data=None, data_serializer=None, file=None, headers=None, method=None):
         if data:
             assert isinstance(data, dict)
@@ -171,7 +182,7 @@ class BaseApp(object):
         final_data = None
         if data:
             if file:
-                final_data = dict([(k, json.dumps(v) if isinstance(v, dict) else str(v)) for k, v in data.iteritems() if v is not None])
+                final_data = dict([(k, self._convert_value(v)) for k, v in data.iteritems() if v is not None])
                 # [IMPORTANT] Force transform all values to str while MultipartPostHandler append it with str directly.
                 # /Library/Python/2.7/site-packages/MultipartPostHandler-0.1.0-py2.7.egg/MultipartPostHandler.pyc in multipart_encode(vars, files, boundary, buffer)
                 # 91             buffer += '--%s\r\n' % boundary
@@ -235,3 +246,13 @@ class BaseApp(object):
     def request_upload(self, api, data, file, headers=None):
         return self._request(api, data=data, file=file, headers=headers)
 
+
+class BaseAppDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(BaseAppDict, self).__init__(*args, **kwargs)
+
+    def __getattribute__(self, item):
+        if item in self:
+            return self[item]
+        else:
+            return super(BaseAppDict, self).__getattribute__(item)
