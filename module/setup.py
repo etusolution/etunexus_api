@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='etunexus',
-      version='0.5',
+      version='0.5.1',
       description='Etu Nexus API',
       url='http://www.etunexus.com/',
       author='Etu Corporation',
