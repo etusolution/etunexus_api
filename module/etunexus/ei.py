@@ -367,6 +367,29 @@ class EIUser(dict):
         return cls(emc_user['name'], emc_user['displayName'], ei_role['roleName'], emc_group, emc_user['id'])
 
 
+class UidBandList(dict):
+    """ Structure for the band list (id and name) of a uid belongs to
+
+    Fields:
+        userId (str): The uid/customer id.
+        bandIdList (list): The list of band ids.
+        bandNameList (list): The list of band names.
+    """
+
+    def __init__(self, band_id_list, band_name_list):
+        assert band_id_list and isinstance(band_id_list, list)
+        assert band_name_list and isinstance(band_name_list, list)
+        super(UidBandList, self).__init__({
+            'bandIdList': band_id_list,
+            'bandNameList': band_name_list
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj
+        return cls(dict_obj['bandIdList'], dict_obj['bandNameList'])
+
+
 class EI3(BaseApp):
     """ Encapsulate Etu Insight (v3) API """
 
@@ -383,6 +406,9 @@ class EI3(BaseApp):
                                   api_host=host if host else self.__HOST,
                                   api_base=api_base if api_base else self.__API_BASE,
                                   shiro_cas_base=shiro_cas_base if shiro_cas_base else self.__SHIRO_CAS_BASE)
+
+    def _resolve_root_url(self, postfix):
+        return 'https://{0}{1}'.format(self._api_host, postfix)
 
     # User info
     def get_me(self):
@@ -449,10 +475,34 @@ class EI3(BaseApp):
 
     def del_band(self, band):
         assert band
-        band_id = band['id'] if isinstance(band, Band) else band
+        band_id = band['id'] if isinstance(band, Band) else int(band)
         assert band_id
         res = self.request_del('/band/{0}'.format(band_id))
         return res['data']
+
+    def get_uid_list(self, band, save_path=None):
+        assert band
+        band_id = band['id'] if isinstance(band, Band) else int(band)
+        assert band_id
+        res = self.request_get('/band/{0}/uidlist'.format(band_id))
+        download_link = res['data']['downloadLink']
+        download_url = self._resolve_root_url(download_link)
+        # TODO: Make download with adding request_download() to baseapp
+
+    # Snapshot
+    def get_snapshot_source(self, band):
+        assert band
+        band_id = band['id'] if isinstance(band, Band) else int(band)
+        assert band_id
+        res = self.request_get('/band/{0}/snapshot'.format(band_id))
+        return Band.from_dict(res['data'])
+
+    def do_snapshot(self, band):
+        assert band
+        band_id = band['id'] if isinstance(band, Band) else int(band)
+        assert band_id
+        res = self.request_post('/band/{0}/snapshot'.format(band_id))
+        return Band.from_dict(res['data'])
 
     # Fixed (external) gene
     def get_fixed_gene_categories(self):
@@ -514,6 +564,26 @@ class EI3(BaseApp):
         res = self.request_get('/statistics/query?groupId={0}&startDate={1}&endDate={2}&itemName={3}'.format(
             group_id, start_date_str, end_date_str, item_str))
         return sorted([(key, value) for (key, value) in res['data'].iteritems()])
+
+    # Customer information
+    def get_customer_info(self, data_source, uid):
+        assert data_source and uid and isinstance(uid, str)
+        data_source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
+        res = self.request_get('/customerinformation/{0}?cId={1}'.format(uid, data_source_id))
+        return res['data']
+
+    def get_uid_band_list(self, user, uid):
+        assert user and uid and isinstance(uid, str)
+        user_id = user['id'] if isinstance(user, User) or isinstance(user, EIUser) else int(user)
+        res = self.request_get('/uidbandlist/id?uid={0}&userId={1}'.format(uid, user_id))
+        return UidBandList.from_dict(res['data'])
+
+    # Item data source
+    def upload_item_data(self, group, file_path):
+        assert group and file_path
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, EIGroup) else int(group)
+        res = self.request_upload('/item', data={'groupId': group_id}, file=file_path)
+        return res['data']['pidNumber']
 
     # Un-documented APIs for admin/operator
     def do_su_login(self, group, user):
