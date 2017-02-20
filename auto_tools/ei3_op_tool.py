@@ -26,6 +26,7 @@ LOGGING_LEVEL = logging.INFO
 # SECURITY_CHECK = False
 # LOGGING_LEVEL = logging.INFO
 
+app_name = 'Etu Insight'
 
 logger = logging.getLogger('ei3_op_tool')
 logger.setLevel(logging.INFO)
@@ -317,6 +318,10 @@ def add_new_bands(ei3, group, user, data_source):
 
 def main():
     os.system('cls' if os.name == 'nt' else 'clear')
+
+    logger.info('*' * (len(app_name)+4))
+    logger.info('* ' + app_name + ' *')
+    logger.info('*' * (len(app_name)+4))
 
     auth_info = AuthInfo()
     if not auth_info.prompt():
