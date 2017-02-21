@@ -6,12 +6,13 @@ import json
 from baseapp import BaseApp
 from enum import *
 
+
 class AppPermission(dict):
-    """ Structure of an app permission
+    """ Structure of an app permission.
 
     Fields:
-        category (str): Permission category, refer to the valid values of each apps
-        id (str): Permission id, refer to each apps
+        category (str): Permission category, refer to the valid values of each apps.
+        id (str): Permission id, refer to each apps.
         level (int): FORBIDDEN (0), VIEW (1), SAVE (2), DELETE (3)
     """
     def __init__(self, category, id, level):
@@ -28,11 +29,11 @@ class AppPermission(dict):
 
 
 class AppRole(dict):
-    """ Structure of an app role
+    """ Structure of an app role.
 
     Fields:
-        name (str): Role name, refer to 'AppRoleName' enum for valid values
-        permissions (list): List of AppPermission/dict
+        name (str): Role name, refer to 'AppRoleName' enum for valid values.
+        permissions (list): List of AppPermission/dict.
     """
     def __init__(self, name, permissions):
         assert name and permissions and isinstance(permissions, list)
@@ -43,17 +44,17 @@ class AppRole(dict):
 
     @classmethod
     def from_dict(cls, dict_obj):
-        return cls(dict_obj['name'], dict['permissions'])
+        return cls(dict_obj['name'], dict_obj['permissions'])
 
 
 class Group(dict):
-    """ Structure of a group
+    """ Structure of a group.
 
     Fields:
-        name (str): The group id/name
-        displayName (str): The display name
-        id (int): The auto id of the group
-        createTime (long): The create time
+        name (str): The group id/name of.
+        displayName (str): The group display name.
+        id (int): The auto id of the group.
+        createTime (long): The group create time.
     """
     def __init__(self, name, display_name, id=None, create_time=None):
         assert name and display_name
@@ -70,11 +71,11 @@ class Group(dict):
 
 
 class UserRole(dict):
-    """ Structure of a user role
+    """ Structure of a user role.
 
     Fields:
-        roleName (str): The role of the user for an application. Refer to 'AppRoleName' enum for valid values.
-        appId (str): The app id. Refer to 'AppId' enum for valid values
+        roleName (str): The role of the user in an application. Refer to 'AppRoleName' enum for valid values.
+        appId (str): The application id. Refer to 'AppId' enum for valid values.
     """
     def __init__(self, role, app_id):
         assert role and app_id
@@ -89,18 +90,19 @@ class UserRole(dict):
 
 
 class User(dict):
-    """ Structure of a user
+    """ Structure of a user.
 
     Fields:
-        name (str): The login name of the user
-        displayName (str): The display name
-        password (str): The password
-        department (str): The department
-        mail (str): The e-mail address
-        roles (list): List of UserRole
-        id (int): The auto id of the user
-        createTime (long): The create time in Epoch (milliseconds)
-        lastUpdateTime (long): The last update time in Epoch (milliseconds)
+        name (str): The user login name (upper, lower, number, and underscore only).
+        displayName (str): The user display name (human-readable).
+        password (str): The password of the user.
+        department (str): The department of the user (human-readable string).
+        mail (str): The e-mail address of the user (human-readable string).
+        roles (list): A list of UserRole instances representing the user roles in each application.
+
+        id (int): The auto id of the user.
+        createTime (long): The create time in Epoch (milliseconds).
+        lastUpdateTime (long): The last update time in Epoch (milliseconds).
     """
     def __init__(self, name, display_name, password=None, department=None, mail=None, roles=None,
                  id=None, create_time=None, last_update_time=None):
@@ -132,7 +134,7 @@ class User(dict):
 
 
 class EventCollector(dict):
-    """ Structure of Event Collector data source content
+    """ Structure of Event Collector data source content.
 
     Fields:
         hostName (str): The host/domain name of the data source. Set wildcard (*) to accept data from all domains.
@@ -149,20 +151,22 @@ class EventCollector(dict):
 
 
 class DataSource(dict):
-    """ Structure of a data source
+    """ Structure of a data source.
 
     Fields:
-        name (str): Data source id/name
-        displayName (str): Data source display name
-        appIds (list[str]): The authorized apps in list, refer to 'AppId' enum for valid values
+        name (str): The data source id/name.
+        displayName (str): The data source display name.
+        appIds (list[str]): A list of authorized applications, refer to 'AppId' enum for valid values.
         contentType (str): The data source content type, refer to 'DataSourceContentType' enum for valid values
+        type (str): The data source type (how to get data), refer to 'DataSourceType' enum for valid values
+
+        eventCollector (obj): An EventCollector object if type is 'EVENT_COLLECTOR'
+        importer (obj): An Importer object if type is 'IMPORTER'
+        fetch (obj): An Fetch object if type is 'FETCH'
+        upload (obj): An Upload object if type is 'UPLOAD'
+
         id (int): Data source auto id
         groupId (int): Group auto id
-        type (str): The data source type (how to get data), refer to 'DataSourceType' enum for valid values
-        eventCollector (object): An EventCollector object if type is 'EVENT_COLLECTOR'
-        importer (object): An Importer object if type is 'IMPORTER'
-        fetch (object): An Fetch object if type is 'FETCH'
-        upload (object): An Upload object if type is 'UPLOAD'
     """
     # TODO: importer, fetch, upload not supported yet
     def __init__(self, name, display_name, app_ids, content_type, id=None, group_id=None):
@@ -176,6 +180,11 @@ class DataSource(dict):
         })
 
     def init_event_collector(self, hostname):
+        """ Initialize the data source as Event Collector type.
+
+        Arguments:
+            hostname (str): The host/domain name of the data source. Set wildcard (*) to accept data from all domains.
+        """
         event_collector = EventCollector(hostname)
         self.update({
             'type': DataSourceType.EVENT_COLLECTOR,
@@ -202,12 +211,12 @@ class DataSource(dict):
 
 
 class ExporterExtraSchema(dict):
-    """ Structure for Extra Schema in Exporter Setting
+    """ Structure for Extra Schema in Exporter Setting.
 
     Fields:
-        name (str): Name/field of the schema
-        type (str): Type of the schema, e.g. string, int
-        link (str): The tuple key to explode
+        name (str): Name/field of the schema.
+        type (str): Type of the schema, e.g. string, int.
+        link (str): The tuple key to explode. Set it to '' for first level event collector parameters.
     """
 
     def __init__(self, name, type, link):
@@ -224,16 +233,16 @@ class ExporterExtraSchema(dict):
 
 
 class ExporterSetting(dict):
-    """ Structure for Exporter setting
+    """ Structure for Exporter setting.
 
     Fields:
-        enabled (bool): The exporter is enabled or not
-        initalConvetTime (long): The initial conversion time in Epoch (milliseconds). Default: now
-        tupleKey (str): The tuple key. Default: ptuple
-        extraSchema (object): The extra schema
-        parsingFormat (str): The input data format. Default: NginxPlusLogParserDriver
-        baseSchema (object); The base/default schema
-        updateTime (long): The latest data export time in Epoch (milliseconds)
+        enabled (bool): The exporter is enabled or not.
+        initalConvetTime (long): The initial conversion time in Epoch (milliseconds). Default: now.
+        tupleKey (str): The tuple key. Default: ptuple.
+        extraSchema (object): The extra schema.
+        parsingFormat (str): The input data format. Default: NginxPlusLogParserDriver.
+        baseSchema (obj); The base/default schema.
+        updateTime (long): The latest data export time in Epoch (milliseconds).
 
     NOTE:
         initalConvetTime is the legacy typo of "initialConversionTime".
@@ -283,7 +292,7 @@ class ExporterSetting(dict):
 
 
 class EMC2(BaseApp):
-    """ Encapsulate Etu Management Center (v2) API """
+    """ Encapsulate Etu Management Center (v2) API. """
 
     __APP_NAME = 'EMC2'
     __HOST = 'emc.online.etunexus.com'
@@ -291,7 +300,7 @@ class EMC2(BaseApp):
     __SHIRO_CAS_BASE = '/shiro-cas'
 
     def __init__(self, cas, host=None, api_base=None, shiro_cas_base=None):
-        """ Constructor """
+        """ Constructor of EMC2 instance. """
 
         api_base = api_base if api_base else self.__API_BASE
         super(EMC2, self).__init__(cas, EMC2.__APP_NAME,
@@ -301,98 +310,231 @@ class EMC2(BaseApp):
 
     # Group #
     def get_groups(self):
+        """ Get group list.
+
+        Arguments:
+        Return:
+            A list of Group instances.
+        """
         res = self.request_get('/group')
         return [Group.from_dict(x) for x in res]
 
     def add_group(self, group):
+        """ Add a new group.
+
+        Arguments:
+            group (obj): The Group instance to add.
+        Return:
+            A Group instance as the added one (with fields filled by server, e.g. createTime).
+        """
         assert group and isinstance(group, Group)
         res = self.request_post('/group', group)
         return Group.from_dict(res)
 
     def update_group(self, group):
+        """ Update a group.
+
+        Arguments:
+            group (obj): The Group instance to update, with valid "id".
+        Return:
+            A Group instance as the updated one.
+        """
         assert group and isinstance(group, Group)
         group_id = group['id']
         res = self.request_post('/group/{0}'.format(group_id), group)
         return Group.from_dict(res)
 
     def del_group(self, group):
+        """ Delete a group.
+
+        Arguments:
+            group (obj or int): The Group instance or group id to delete.
+        Return:
+            The group id deleted. It must be the same as the one in argument.
+        """
         assert group
         group_id = group['id'] if isinstance(group, Group) else int(group)
         assert group_id
-        return self.request_del('/group/{0}'.format(group_id))
+        res = self.request_del('/group/{0}'.format(group_id))
+        assert res['groupId'] == group_id
+        return res['groupId']
 
     # User #
     def me(self):
+        """ Get "me" user instance
+
+        Arguments:
+        Return:
+            A User instance as "me", the login user or simulated user
+        """
         res = self.request_get('/user/me')
         return User.from_dict(res)
 
     def get_users(self, group):
+        """ Get user list in a group.
+
+        Arguments:
+            group (obj or int): The Group instance or group id to get user list.
+        Return:
+            A list of User instances.
+        """
         assert group
         group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_get('/group/{0}/user'.format(group_id))
         return [User.from_dict(x) for x in res]
 
     def add_user(self, group, user):
+        """ Add a user into a group.
+
+        Arguments:
+            group (obj or int): The Group instance or group id to add the user into.
+            user (obj): The User instance to add.
+        Return:
+            An User instance as the added one (with fields filled by server, e.g. createTime).
+        """
         assert group and user and isinstance(user, User)
         group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_post('/group/{0}/user'.format(group_id), user)
         return User.from_dict(res)
 
     def update_user(self, user):
+        """ Update an user.
+
+        Do not use this method to change user password. Use "change_user_password()" instead.
+
+        Arguments:
+            user (obj): The User instance to update, with a valid "id".
+        Return:
+            An User instance as the updated one.
+        """
         assert user and isinstance(user, User)
         user_id = user['id']
         res = self.request_post('/user/{0}'.format(user_id), user)
         return User.from_dict(res)
 
     def del_user(self, user):
+        """ Delete an user.
+
+        Arguments:
+            user (obj or int): The User instance or user id to delete.
+        Return:
+            The user id deleted. It must be the same as the one in argument.
+        """
         assert user
         user_id = user['id'] if isinstance(user, User) else int(user)
-        return self.request_del('/user/{0}'.format(user_id))
+        res = self.request_del('/user/{0}'.format(user_id))
+        assert res['userId'] == user_id
+        return res['userId']
 
     def change_user_password(self, user, password):
+        """ Change user password.
+
+        For normal user, the "user" argument should be "me".
+        For operator, the "user" can be another user in the same group.
+        For admin, The "user" can be anyone in the system.
+
+        Arguments:
+            user (obj or int): The User instance or user id to change password.
+            password (str): The new password to set.
+        Return:
+            The user id with password changed. It must be the same as the one in argument.
+        """
         assert user and password
         user_id = user['id'] if isinstance(user, User) else int(user)
         params = {
             'password': password
         }
-        return self.request_post('/user/{0}/password'.format(user_id), params)
+        res = self.request_post('/user/{0}/password'.format(user_id), params)
+        assert res['userId'] == user_id
+        return res['userId']
 
     # Apps #
     def get_apps(self):
+        """ Get application list supported in the system.
+
+        Arguments:
+        Return:
+            A list of applications (string), refer to "AppId" enum for the valid values.
+        """
         return self.request_get('/app')
 
     def get_app_permission(self, app_id):
+        """ Get application permission settings.
+
+        Arguments:
+            app_id (str): An application id, refer to "AppId" enum for the valid values.
+        Return:
+            A list of AppPermission instances as the setting of the given application.
+        """
         assert app_id
         res = self.request_get('/app/{0}/permission'.format(app_id))
         assert (res['appId'] == app_id)
-        permissions = res['permissions']
-        self._logger.debug('app (%s) permissions (%s)' % (app_id, permissions))
-        return [AppPermission.from_dict(x) for x in permissions]
+        return [AppPermission.from_dict(x) for x in res['permissions']]
 
     def get_app_roles(self, app_id):
+        """ Get application role and permission settings.
+
+        Arguments:
+            app_id (str): An application id, refer to "AppId" enum for the valid values.
+        Return:
+            A list of AppRole instances as the role setting of the given application.
+        """
         assert app_id
         res = self.request_get('/app/{0}/role'.format(app_id))
-        return [AppRole(x['name'], x['permissions']) for x in res]
+        return [AppRole.from_dict(x) for x in res]
 
     def update_app_role(self, app_id, app_role):
+        """ Update a role and permission setting in an application.
+
+        Arguments:
+            app_id (str): An application id, refer to "AppId" enum for the valid values.
+            app_role (obj): The AppRole instance to update.
+        Return:
+            An AppRole as the as the updated one.
+        """
         assert app_id and app_role and isinstance(app_role, AppRole)
         res = self.request_post('/app/{0}/role'.format(app_id), app_role)
         return AppRole.from_dict(res)
 
     # Data source #
     def get_data_sources(self, group):
+        """ Get data source list in a group.
+
+        Arguments:
+            group (obj or int): The Group instance or group id to get.
+        Return:
+            A list of DataSource instances.
+        """
         assert group
         group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_get('/group/{0}/data-source'.format(group_id))
         return [DataSource.from_dict(x) for x in res]
 
     def add_data_source(self, group, data_source):
+        """ Add a data source to a group.
+
+        To add a new data source, first create and initialize a DataSource instance before calling. During initializing
+        data source, not only "new" an instance but need to call the proper "init_xxx()" method as requested.
+
+        Arguments:
+            group (obj or int): The Group instance or group id to get.
+            data_source (object): The DataSource instance to add.
+        Return:
+            A DataSource instance as the added one.
+        """
         assert data_source and isinstance(data_source, DataSource)
         group_id = group['id'] if isinstance(group, Group) else int(group)
         res = self.request_post('/group/{0}/data-source'.format(group_id), data_source)
         return DataSource.from_dict(res)
 
     def update_data_source(self, data_source):
+        """ Update a data source.
+
+        Arguments:
+            data_source (obj): The DataSource instance to update, with valid "id".
+        Return:
+            A DataSource instance as the updated one.
+        """
         assert data_source and isinstance(data_source, DataSource)
         source_id = data_source['id']
         assert source_id
@@ -400,19 +542,49 @@ class EMC2(BaseApp):
         return DataSource.from_dict(res)
 
     def del_data_source(self, data_source):
+        """ Delete a data source.
+
+        Arguments:
+            data_source (obj or int): The DataSource instance or data source id to delete.
+        Return:
+            The data source id deleted. It must be the same as the one in argument.
+        """
         assert data_source
-        data_source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
-        assert data_source_id
-        return self.request_del('/data-source/{0}'.format(data_source_id))
+        source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
+        assert source_id
+        res = self.request_del('/data-source/{0}'.format(source_id))
+        assert res == source_id
+        return res
 
     # Exporter setting #
     def get_exporter_setting(self, data_source):
+        """ Get Exporter setting of an event collector type data source.
+
+        As the input argument accepts a generic data source id, this function does not check if the data source is
+        really "event collector" type. The caller SHOULD ensure the data source is eligible for configuring exporter.
+
+        Arguments:
+            data_source (obj or int): The DataSource instance or data source id to get exporter setting.
+        Return:
+            An ExporterSetting instance.
+        """
         assert data_source
         source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
         res = self.request_get('/data-source/{0}/exporter'.format(source_id))
         return ExporterSetting.from_dict(res)
 
     def update_exporter_setting(self, data_source, exporter_setting):
+        """ Update Exporter setting of an event collector type data source.
+
+        As the input argument accepts a generic data source id, this function does not check if the data source is
+        really "event collector" type. The caller SHOULD ensure the data source is eligible for configuring exporter.
+
+        Arguments:
+            data_source (obj or int): The DataSource instance or data source id to get exporter setting.
+            exporter_setting (obj): The ExporterSetting instance to apply to the data source.
+        Return:
+            An ExporterSetting instance as the applied one.
+        """
         assert data_source and  exporter_setting and isinstance(exporter_setting, ExporterSetting)
         source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
         assert source_id

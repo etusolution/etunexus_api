@@ -2,29 +2,29 @@
 
 
 class AppId(object):
-    """ Enum of app ids (str) """
+    """ Enum of app ids """
     EMC = 'ETU-SHIELD'
     ER = 'ETU-RECOMMENDER'
     EI = 'ETU-INSIGHT'
 
 
 class AppRoleName(object):
-    """ Enum of roles of apps (str) """
+    """ Enum of roles of apps """
     VIEWER = 'Viewer'
     OPERATOR = 'Operator'
     ADMIN = 'ADMIN'
 
 
 class DataSourceContentType(object):
-    """ Enum of data source content type (str) """
+    """ Enum of data source content type """
     BEHAVIOR = 'behavior'
-    ITEM_INFO = 'item_info'
+    ITEM_INFO = 'item'
     USER_PROFILE = 'profile'
     USER_RANK = 'user_rank'
 
 
 class DataSourceType(object):
-    """ Enumeration of data source type (str) """
+    """ Enumeration of data source type """
     EVENT_COLLECTOR = 'EVENT_COLLECTOR'
     IMPORTER = 'IMPORTER'
     FETCH = 'FETCH'
@@ -132,3 +132,10 @@ class EIStatisticsItem(object):
     ADD_BAND = 'addBand'
     UPDATE_BAND = 'updateBand'
     BAND_COUNT = 'bandCount'
+
+
+class LayoutTitleAlignment(object):
+    """ Enumeration of ER logic layout title alignment """
+    CENTER = 'center'
+    LEFT = 'left'
+    RIGHT = 'right'
