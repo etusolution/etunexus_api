@@ -219,6 +219,15 @@ class BaseApp(object):
             self._logger.error('%s error: Illegal response (%s) from server' % (traceback.extract_stack()[-3][2], res))
             raise e
 
+    def _download(self, url, save_path):
+        self._check_login()
+
+        res = urllib2.urlopen(url)
+        with open(save_path, 'wb') as output:
+            output.write(res.read())
+
+        return save_path
+
     def request_get(self, api, headers=None):
         return self._request(api, headers=headers)
 
@@ -245,6 +254,9 @@ class BaseApp(object):
 
     def request_upload(self, api, data, file, headers=None):
         return self._request(api, data=data, file=file, headers=headers)
+
+    def request_download(self, url, save_path):
+        return self._download(url, save_path)
 
 
 class BaseAppDict(dict):

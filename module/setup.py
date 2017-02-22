@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='etunexus',
-    version='0.5.4',
+    version='0.5.5',
     description='Etu Nexus API',
     long_description=open("README.rst").read(),
     classifiers=[

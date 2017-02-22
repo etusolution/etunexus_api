@@ -437,7 +437,7 @@ class EI3(BaseApp):
                                   shiro_cas_base=shiro_cas_base if shiro_cas_base else self.__SHIRO_CAS_BASE)
 
     def _resolve_root_url(self, postfix):
-        return 'https://{0}{1}'.format(self._api_host, postfix)
+        return 'https://{0}/{1}'.format(self._api_host, postfix)
 
     # User info
     def get_me(self):
@@ -605,23 +605,24 @@ class EI3(BaseApp):
         assert res_id == band_id
         return res_id
 
-    def get_uid_list(self, band, save_path=None):
+    def get_uid_list(self, band, save_path):
         """ Get/download user/customer id list in a band.
         
         Arguments:
             band (obj or int): The Band instance or a band id to get the user list.
-            save_path (str): The file path to save the user list. If it is None, return the content directly.
+            save_path (str): The file path to save the user list.
         Return:
-            The save_path in argument if it is given in argument. Otherwise, the user list content.
+            The save_path in argument.
         """
         assert band
         band_id = band['id'] if isinstance(band, Band) else int(band)
         assert band_id
         res = self.request_get('/band/{0}/uidlist'.format(band_id))
         download_link = res['data']['downloadLink']
+        self.logger.debug('Get the download link: %s' % download_link)
         download_url = self._resolve_root_url(download_link)
-        # TODO: Make download with adding request_download() to baseapp
-        return save_path
+        self.logger.debug('Make download from: %s' % download_url)
+        return self.request_download(download_url, save_path)
 
     # Snapshot
     def do_snapshot(self, band):
