@@ -7,12 +7,14 @@ Etunexus is an GPL-licensed SDK encapsulating the API to interact with
 It supports API of Etu Management Center (EMC) v2, Etu Recommender (ER)
 v3, and Etu Insight (EI) v3.
 
+
 Features
 --------
 
 -  Simplify the single-signon process with a simple login() call.
 -  Encapsulate the protocol detail into easy-of-use objects, but still
    keep the flexibility for adjustment.
+
 
 Quick start
 -----------
@@ -35,10 +37,12 @@ login() call as:
     >>> cas = CAS([user_group], [user_name], [password])
     >>> # It is optional to make SSO login first.
     >>> cas.login()
+    'TGT-147-ZRV9j9fy2mv2wZujOKMyaFlOeKXJqvf9S6jBcWeJ39vb1TzKaY-cas.etu.im'
     >>>
     >>> # Login application
     >>> emc2 = EMC2(cas)
     >>> emc2.login()
+    'ST-232-wUwi0bNFhB66Xxr4wM7o-cas.etu.im'
 
 The subsequent API call is also trivial with the methods of the
 application object. For example, it is easy to get the group list and
@@ -50,12 +54,18 @@ with:
     >>> # Get all groups, and then find a specific group.
     >>> groups=emc2.get_groups()
     >>> workshop_group = filter(lambda x: x['name']=='workshop', groups)[0]
+    >>> print workshop_group
+    {'id': 2, 'displayName': u'Workshop Sample', 'name': u'workshop', 'createTime': 1484113449499}
     >>>
     >>> # Get all users, and then find a specific user
     >>> workshop_users = emc2.get_users(workshop_group)
     >>> workshop_user = filter(lambda x: x['name']=='workshop_user', workshop_users)[0]
+    >>> print workshop_user
+    {'displayName': u'Workshop User', 'name': u'workshop_user', 'roles': [{'roleName': u'Operator', 'appId': u'ETU-INSIG
+    HT'}, {'roleName': u'Viewer', 'appId': u'ETU-RECOMMENDER'}], 'lastUpdateTime': 1487399443855, 'createTime': 14841296
+    56168, 'department': u'', 'mail': u'', 'password': None, 'id': 3}
 
-It is worthy noticed that the data returned are wrapped into
+It is worthy of noticing that the data returned are wrapped into
 objects/classes:
 
 .. code-block:: pycon
@@ -73,6 +83,8 @@ designed:
 
     >>> new_user=User('new_workshop_user', 'New workshop user', 'password')
     >>> emc2.add_user(workshop_group, new_user)
+    {'createTime': 1487735435494, 'department': u'', 'displayName': u'New workshop user', 'id': 15, 'lastUpdateTime': 14
+    87735435494, 'mail': u'', 'name': u'new_workshop_user', 'password': None, 'roles': []}
 
 And, it is easy to update the data with:
 
@@ -84,10 +96,14 @@ And, it is easy to update the data with:
     >>> update_user['roles']=[UserRole(AppRoleName.VIEWER, AppId.ER), UserRole(AppRoleName.VIEWER, AppId.EI)]
     >>>
     >>> emc2.update_user(update_user)
+    {'createTime': 1487735435494, 'department': u'', 'displayName': u'New workshop user', 'id': 15, 'lastUpdateTime': 14
+    87736051534, 'mail': u'', 'name': u'new_workshop_user', 'password': None, 'roles': [{'appId': u'ETU-RECOMMENDER', 'r
+    oleName': u'Viewer'}, {'appId': u'ETU-INSIGHT', 'roleName': u'Viewer'}]}
 
 Similar programming model for other applications (ER and EI). Please
 refer to pydoc for detail. There are also samples in `GitHub
 repository <https://github.com/etusolution/etunexus_api.git>`__.
+
 
 Installation
 ------------
