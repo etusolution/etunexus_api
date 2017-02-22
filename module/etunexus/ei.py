@@ -538,7 +538,7 @@ class EI3(BaseApp):
         assert band_category_id
         res = self.request_del('/bandcategory/{0}'.format(band_category_id))
         res_id = res['data']['id']
-        assert res_id== band_category_id
+        assert res_id == band_category_id
         return res_id
 
     # Band

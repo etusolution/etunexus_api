@@ -356,8 +356,8 @@ class EMC2(BaseApp):
         group_id = group['id'] if isinstance(group, Group) else int(group)
         assert group_id
         res = self.request_del('/group/{0}'.format(group_id))
-        assert res['groupId'] == group_id
-        return res['groupId']
+        assert res == group_id
+        return res
 
     # User #
     def me(self):
@@ -423,8 +423,8 @@ class EMC2(BaseApp):
         assert user
         user_id = user['id'] if isinstance(user, User) else int(user)
         res = self.request_del('/user/{0}'.format(user_id))
-        assert res['userId'] == user_id
-        return res['userId']
+        assert res == user_id
+        return res
 
     def change_user_password(self, user, password):
         """ Change user password.
@@ -445,8 +445,8 @@ class EMC2(BaseApp):
             'password': password
         }
         res = self.request_post('/user/{0}/password'.format(user_id), params)
-        assert res['userId'] == user_id
-        return res['userId']
+        assert res == user_id
+        return res
 
     # Apps #
     def get_apps(self):

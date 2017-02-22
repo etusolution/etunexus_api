@@ -100,6 +100,13 @@ And, it is easy to update the data with:
     87736051534, 'mail': u'', 'name': u'new_workshop_user', 'password': None, 'roles': [{'appId': u'ETU-RECOMMENDER', 'r
     oleName': u'Viewer'}, {'appId': u'ETU-INSIGHT', 'roleName': u'Viewer'}]}
 
+Finally, delete a resource is also as simple as:
+
+.. code-block:: pycon
+
+    >>> emc2.del_user(update_user)
+    15
+
 Similar programming model for other applications (ER and EI). Please
 refer to pydoc for detail. There are also samples in `GitHub
 repository <https://github.com/etusolution/etunexus_api.git>`__.
