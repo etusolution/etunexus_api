@@ -229,6 +229,184 @@ def add_new_logics(er3, group, data_source):
             logger.info('Done.')
 
 
+def func_new_customer(emc2, er3):
+    try:
+        while (True):
+            new_group = add_new_group(emc2)
+            if new_group is not None:
+                new_user = add_new_user(emc2, new_group)
+                new_ds = add_new_data_source(emc2, new_group)
+                add_new_logics(er3, new_group, new_ds)
+
+            go_next = promise_prompt('Do you want to create another one (Y/n) [n]? ', 'n')
+            if go_next.lower() != 'y':
+                break
+    except KeyboardInterrupt, ki:
+        return 1
+    except Exception, e:
+        logger.error('Failed to complete the process. Please check the error and try again.')
+        logger.error('Error message: ' + str(e))
+        return 2
+
+    return 0
+
+
+def get_exist_group(emc2):
+    group_name = promise_prompt('Please input customer group name: ')
+    groups = emc2.get_groups()
+    matched_groups = filter(lambda x: x['name'] == group_name, groups)
+    if len(matched_groups) == 0:
+        logger.warn('Group (%s) does not exist. Please check and try again.' % group_name)
+        return None
+
+    group = matched_groups[0]
+    return group
+
+
+def suspend_logics(emc2, er3, suspend_group):
+    logics = er3.get_logics(suspend_group)
+    for logic in logics:
+        logic['active'] = False
+        logger.info('Suspend recommendation Logic (%s)...' % logic['name'])
+        er3.update_logic(logic)
+        logger.info('Done.')
+
+
+def suspend_datasource(emc2, suspend_group):
+    dss = emc2.get_data_sources(suspend_group)
+    for ds in dss:
+        ds['appIds'].remove(AppId.ER)
+        logger.info('Removing ER authorization for data source (%s)...' % ds['name'])
+        emc2.update_data_source(ds)
+        logger.info('Done.')
+
+        exporter_setting = emc2.get_exporter_setting(ds)
+        exporter_setting['enabled'] = False
+        logger.info('Disabling exporter for data source (%s)...' % ds['name'])
+        emc2.update_exporter_setting(ds, exporter_setting)
+        logger.info('Done.')
+
+
+def remove_user(emc2, suspend_group):
+    users = emc2.get_users(suspend_group)
+    for user in users:
+        logger.info('Removing user (%s)...' % user['name'])
+        emc2.del_user(user)
+        logger.info('Done.')
+
+
+def func_suspend_customer(emc2, er3):
+    try:
+        while (True):
+            suspend_group = get_exist_group(emc2)
+            if suspend_group is not None:
+                suspend_logics(emc2, er3, suspend_group)
+                suspend_datasource(emc2, suspend_group)
+                remove_user(emc2, suspend_group)
+
+            go_next = promise_prompt('Do you want to suspend another one (Y/n) [n]? ', 'n')
+            if go_next.lower() != 'y':
+                break
+    except KeyboardInterrupt, ki:
+        return 1
+    except Exception, e:
+        logger.error('Failed to complete the process. Please check the error and try again.')
+        logger.error('Error message: ' + str(e))
+        return 2
+
+    return 0
+
+
+def func_exit():
+    return 0
+
+
+class Menu(object):
+
+    class Option(object):
+        def __init__(self, menu_key, menu_display, menu_func, func_args=None):
+            self._menu_key = menu_key
+            self._menu_display = menu_display
+            self._menu_func = menu_func
+            self._func_args = func_args if func_args is not None else []
+
+        @property
+        def menu_key(self):
+            return self._menu_key
+
+        @property
+        def menu_display(self):
+            return self._menu_display
+
+        @property
+        def menu_func(self):
+            return self._menu_func
+
+        @property
+        def func_args(self):
+            return self._func_args
+
+    def __init__(self, title):
+        self._title = title
+        self._options = []
+        self._indicator = ">>> "
+
+    @property
+    def title(self):
+        return self._title
+
+    @title.setter
+    def title(self, value):
+        self._title = value
+
+    @property
+    def indicator(self):
+        return self._indicator
+
+    @indicator.setter
+    def indicator(self, value):
+        self._indicator = value
+
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, value):
+        self._options = value
+
+    @staticmethod
+    def cls():
+        os.system('cls' if os.name == 'nt' else 'clear')
+
+    def show(self):
+        print self.title
+        print
+        for option in self.options:
+            print '{0}) {1}'.format(option.menu_key, option.menu_display)
+        print
+
+    def input(self):
+        selected = promise_prompt(self.indicator)
+        for option in self.options:
+            if option.menu_key.lower() == selected.lower():
+                return option
+
+        return None
+
+    def open(self):
+        option = None
+
+        ret = None
+        while option is None:
+            self.show()
+            option = self.input()
+            if option is not None:
+                ret = option.menu_func(*option.func_args)
+
+        return ret
+
+
 def main():
     os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -258,23 +436,14 @@ def main():
 
     logger.info('Done.')
 
-    try:
-        while (True):
-            new_group = add_new_group(emc2)
-            if new_group is not None:
-                new_user = add_new_user(emc2, new_group)
-                new_ds = add_new_data_source(emc2, new_group)
-                add_new_logics(er3, new_group, new_ds)
+    main_menu = Menu('Please select the function to proceed: ')
+    main_menu.options = [
+        Menu.Option('1', 'Add a new customer', func_new_customer, [emc2, er3]),
+        Menu.Option('2', 'Suspend a customer', func_suspend_customer, [emc2, er3]),
+        Menu.Option('E', 'Exit', func_exit)
+    ]
+    return main_menu.open()
 
-            go_next = promise_prompt('Do you want to create another one (Y/n) [n]? ', 'n')
-            if go_next.lower() != 'y':
-                break
-    except KeyboardInterrupt, ki:
-        return 1
-    except Exception, e:
-        logger.error('Failed to complete the process. Please check the error and try again.')
-        logger.error('Error message: ' + str(e))
-        return 2
 
 # End of main
 
