@@ -1,9 +1,10 @@
 from setuptools import setup, find_packages
 
+import etunexus
 
 setup(
     name='etunexus',
-    version='0.5.5',
+    version=etunexus.__version__,
     description='Etu Nexus API',
     long_description=open("README.rst").read(),
     classifiers=[
@@ -16,10 +17,10 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Intended Audience :: Developers',
     ],
-    url='http://www.etunexus.com/',
-    author='Etu Corporation',
-    author_email='indichen@etusolution.com',
-    license='GPL',
+    url=etunexus.__url__,
+    author=etunexus.__author__,
+    author_email=etunexus.__author_email__,
+    license=etunexus.__license__,
     packages=find_packages(),
     install_requires=[
         'MultipartPostHandler'
