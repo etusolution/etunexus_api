@@ -7,6 +7,30 @@ from baseapp import BaseApp
 from enum import *
 
 
+class AppInfo(dict):
+    """ Structure for an app information
+
+    Fields:
+        id (str): App id, refer to "AppId" enum for valid values.
+        version (str): App version.
+        console (str): The URL link to the app console.
+        image (str): The URL link to the app presentation image.
+    """
+
+    def __init__(self, id, version, console=None, image=None):
+        super(AppInfo, self).__init__({
+            'id': id,
+            'version': version,
+            'console': console,
+            'image': image
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj
+        return cls(dict_obj['id'], dict_obj['version'], dict_obj.get('console'), dict_obj.get('image'))
+
+
 class AppPermission(dict):
     """ Structure of an app permission.
 
@@ -454,9 +478,10 @@ class EMC2(BaseApp):
 
         Arguments:
         Return:
-            A list of applications (string), refer to "AppId" enum for the valid values.
+            A list of AppInfo instances as the applications installed in system.
         """
-        return self.request_get('/app')
+        res = self.request_get('/app')
+        return [AppInfo.from_dict(x) for x in res]
 
     def get_app_permission(self, app_id):
         """ Get application permission settings.
