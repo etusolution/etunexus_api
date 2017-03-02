@@ -50,6 +50,7 @@ class AuthInfo():
         self.cas_host = DEF_CAS_HOST
         self.emc2_host = DEF_EMC2_HOST
         self.er3_host = DEF_ER3_HOST
+        self.security_check = SECURITY_CHECK
         self.group = ''
         self.user = ''
         self.password = ''
@@ -61,6 +62,11 @@ class AuthInfo():
             self.cas_host = promise_prompt('Please input single sign-on host [%s]: ' % DEF_CAS_HOST, DEF_CAS_HOST)
             self.emc2_host = promise_prompt('Please input EMC2 host [%s]: ' % DEF_EMC2_HOST, DEF_EMC2_HOST)
             self.er3_host = promise_prompt('Please input ER3 host [%s]: ' % DEF_ER3_HOST, DEF_ER3_HOST)
+
+            if self.cas_host != DEF_CAS_HOST:
+                skip_security_check = promise_prompt('Skip security check (Y/n) [n]?', 'n')
+                if skip_security_check.lower() == 'y':
+                    self.security_check = False
 
             logger.info('\n[Input login info]')
             self.group = promise_prompt('Group: ')
@@ -77,6 +83,10 @@ class AuthInfo():
     @property
     def er3_host(self):
         return self.er3_host
+
+    @property
+    def security_check(self):
+        return self.security_check
 
     @property
     def group(self):
@@ -153,7 +163,7 @@ def add_new_data_source(emc2, group):
     dss = emc2.get_data_sources(group)
     matched_dss = filter(lambda x: x['name']==ds_name, dss)
     if len(matched_dss) > 0:
-        logger.info('Existing data source. No need to add new user.')
+        logger.info('Existing data source. No need to add new one.')
         ds = matched_dss[0]
 
         # Check the data source is ER-authorized
@@ -176,10 +186,10 @@ def add_new_data_source(emc2, group):
         ds = emc2.add_data_source(group, ds)
         logger.info('Done.')
 
-        logger.info('Setting exporter...')
-        exporter_setting = ExporterSetting(True)
-        emc2.update_exporter_setting(ds, exporter_setting)
-        logger.info('Done.')
+    logger.info('Setting exporter...')
+    exporter_setting = ExporterSetting(True)
+    emc2.update_exporter_setting(ds, exporter_setting)
+    logger.info('Done.')
 
     return ds
 
@@ -222,7 +232,17 @@ def add_new_logics(er3, group, data_source):
     for logic in new_logics:
         exist_logic = filter(lambda x: x['name'] == logic['name'], logics)
         if len(exist_logic) > 0:
-            logger.info('Logic (%s) already exist. No need to add new.' % logic['name'])
+            logger.info('Logic (%s) already exist. No need to add new one.' % logic['name'])
+
+            # The filter result is a list. get the first element for further check.
+            exist_logic = exist_logic[0]
+
+            # Check if the logic is enabled.
+            if not exist_logic['active']:
+                logger.info('Logic (%s) is not enabled. Active it...' % exist_logic['name'])
+                exist_logic['active'] = True
+                er3.update_logic(exist_logic)
+                logger.info('Done.')
         else:
             logger.info('Adding logic (%s)...' % logic['name'])
             er3.add_logic(group, logic)
@@ -419,7 +439,7 @@ def main():
         return 1
 
     logger.info('Validating login info...')
-    cas = CAS(auth_info.group, auth_info.user, auth_info.password, auth_info.cas_host, secure=SECURITY_CHECK)
+    cas = CAS(auth_info.group, auth_info.user, auth_info.password, auth_info.cas_host, secure=auth_info.security_check)
     emc2 = EMC2(cas, auth_info.emc2_host)
     emc2.logger.setLevel(LOGGING_LEVEL)
     er3 = ER3(cas, auth_info.er3_host)
@@ -438,7 +458,7 @@ def main():
 
     main_menu = Menu('Please select the function to proceed: ')
     main_menu.options = [
-        Menu.Option('1', 'Add a new customer', func_new_customer, [emc2, er3]),
+        Menu.Option('1', 'Add/Resume a customer', func_new_customer, [emc2, er3]),
         Menu.Option('2', 'Suspend a customer', func_suspend_customer, [emc2, er3]),
         Menu.Option('E', 'Exit', func_exit)
     ]
