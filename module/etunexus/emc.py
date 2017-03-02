@@ -315,6 +315,77 @@ class ExporterSetting(dict):
                    dict_obj.get('parsingFormat'), base_schema, dict_obj.get('updateTime'))
 
 
+class SystemInfo(dict):
+    """ Structure for system information
+
+    Fields:
+        version (str): EMC application version
+        build (str): EMC application build number
+        branch (str): EMC application build branch
+    """
+
+    def __init__(self, version, build, branch):
+        assert version and build and branch
+        super(SystemInfo, self).__init__({
+            'version': version,
+            'build': build,
+            'branch': branch
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj
+        return cls(dict_obj['version'], dict_obj['build'], dict_obj['branch'])
+
+
+class AuditLogEvent(dict):
+    """ Structure for an audit log event.
+
+    Fields:
+        eventTime (long): The event time in Epoch (milliseconds).
+        userId (int): The user id of the event.
+        groupUser (str): A human-readable string of the group/user of the event.
+        msg (str): Detail information of the event. Basically in "[Method]xxx;[Arguments]yyy;" format
+    """
+
+    def __init__(self, event_time, user_id, group_user, msg):
+        assert event_time and user_id and group_user and msg
+        super(AuditLogEvent, self).__init__({
+            'eventTime': event_time,
+            'userId': user_id,
+            'groupUser': group_user,
+            'msg': msg
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj
+        return cls(dict_obj['eventTime'], dict_obj['userId'], dict_obj['groupUser'], dict_obj['msg'])
+
+
+class AuditLog(dict):
+    """ Structure for audit log.
+    
+    Fields:
+        startTime (long): The start time in the audit log query in Epoch (milliseconds).
+        endTime (long): The end time in the audit log query in Epoch (milliseconds).
+        events (list): A list of "AuditLogEvent" instances.
+    """
+
+    def __init__(self, start_time, end_time, events):
+        assert start_time and end_time and events and isinstance(events, list)
+        super(AuditLog, self).__init__({
+            'startTime': start_time,
+            'endTime': end_time,
+            'events': [AuditLogEvent.from_dict(x) for x in events]
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj
+        return cls(dict_obj['startTime'], dict_obj['endTime'], dict_obj['events'])
+
+
 class EMC2(BaseApp):
     """ Encapsulate Etu Management Center (v2) API. """
 
@@ -615,3 +686,21 @@ class EMC2(BaseApp):
         assert source_id
         res = self.request_post('/data-source/{0}/exporter'.format(source_id), exporter_setting)
         return ExporterSetting.from_dict(res)
+
+    # System #
+    def get_system_info(self):
+        """ Get EMC application information (system information).
+
+        Currently, only version information meaningful.
+
+        Arguments:
+        Return:
+            A SystemInfo instance.
+        """
+        res = self.request_get('/system/version')
+        return SystemInfo.from_dict(res)
+
+    def get_audit_logs(self, start_time, end_time):
+        assert start_time and end_time
+        res = self.request_get('/audit?startTime={0}&endTime={1}'.format(start_time, end_time))
+        return AuditLog.from_dict(res)
