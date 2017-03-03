@@ -315,6 +315,40 @@ class ExporterSetting(dict):
                    dict_obj.get('parsingFormat'), base_schema, dict_obj.get('updateTime'))
 
 
+class DataSourceSchema(dict):
+    """ Structure for the schema of different data source content type.
+    
+    Fields:
+        name (str): The data field name.
+        type (str): The data field type, e.g. string, int
+        required (bool): The data field is mandatory or not.
+
+        (For DataSourceContentType.BEHAVIOR)
+        link (str): If the data field in "ptuple" or not. "ptuple" is supported yet.
+
+        (For DataSourceContentType.ITEM_INFO, DataSourceContentType.USER_PROFILE, and DataSourceContentType.USER_RANK)
+        key (bool): THe data field is key field or not.
+    """
+
+    def __init__(self, name, type, required, link=None, key=None):
+        assert name and type and required
+        super(DataSourceSchema, self).__init__({
+            'name': name,
+            'type': type,
+            'required': True if bool(required) else False,
+
+            # behavior
+            'link': link,
+            # userprofile, item, userrank
+            'key': key
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj
+        return cls(dict_obj['name'], dict_obj['type'], dict_obj['required'], dict_obj.get('link'), dict_obj.get('key'))
+
+
 class SystemInfo(dict):
     """ Structure for system information
 
@@ -373,7 +407,7 @@ class AuditLog(dict):
     """
 
     def __init__(self, start_time, end_time, events):
-        assert start_time and end_time and events and isinstance(events, list)
+        assert start_time and end_time and events is not None and isinstance(events, list)
         super(AuditLog, self).__init__({
             'startTime': start_time,
             'endTime': end_time,
@@ -686,6 +720,19 @@ class EMC2(BaseApp):
         assert source_id
         res = self.request_post('/data-source/{0}/exporter'.format(source_id), exporter_setting)
         return ExporterSetting.from_dict(res)
+
+    # Data source information #
+    def get_data_source_schema(self, content_type):
+        """ Get data source schema.
+        
+        Arguments:
+            content_type (str): The data source content type, refer to DataSourceContentType for valid values.
+        Return:
+            A list of DataSourceSchema instances.
+        """
+        assert content_type
+        res = self.request_get('/data-source/schema/{0}'.format(content_type))
+        return [DataSourceSchema.from_dict(x) for x in res]
 
     # System #
     def get_system_info(self):

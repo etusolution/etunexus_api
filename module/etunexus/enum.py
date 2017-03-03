@@ -19,8 +19,8 @@ class DataSourceContentType(object):
     """ Enum of data source content type """
     BEHAVIOR = 'behavior'
     ITEM_INFO = 'item'
-    USER_PROFILE = 'profile'
-    USER_RANK = 'user_rank'
+    USER_PROFILE = 'userprofile'
+    USER_RANK = 'userrank'
 
 
 class DataSourceType(object):
