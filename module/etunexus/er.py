@@ -5,6 +5,62 @@ from emc import Group, DataSource
 from enum import *
 
 
+class ERGroup(dict):
+    """ Structure of a ER specific group.
+
+    NOTICE: No createTime field as in emc.Group.
+
+    Fields:
+        name (str): The group id/name of.
+        displayName (str): The group display name.
+        id (int): The auto id of the group.
+        createTime (long): The group create time.
+    """
+    def __init__(self, name, display_name, id=None):
+        assert name and display_name
+        super(ERGroup, self).__init__({
+            'name': name,
+            'displayName': display_name,
+            'id': id
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        return cls(dict_obj['name'], dict_obj['displayName'], dict_obj.get('id'))
+
+
+class ERDataSource(dict):
+    """ Structure of a ER specific/authorized data source.
+
+    NOTICE: While all data source management should be applied on EMC. The structure here includes only basic
+    information as not as rich as emc.DataSource.
+
+    Fields:
+        name (str): The data source id/name.
+        displayName (str): The data source display name.
+        contentType (str): The data source content type, refer to 'DataSourceContentType' enum for valid values
+        type (str): The data source type (how to get data), refer to 'DataSourceType' enum for valid values
+
+        id (int): Data source auto id
+        groupId (int): Group auto id
+    """
+    def __init__(self, name, display_name, content_type, type, id=None, group_id=None):
+        super(ERDataSource, self).__init__({
+            'name': name,
+            'displayName': display_name,
+            'contentType': content_type,
+            'type': type,
+
+            'id': id,
+            'groupId': group_id
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        return cls(dict_obj['name'], dict_obj['displayName'], dict_obj['contentType'], dict_obj['type'],
+                      dict_obj.get('id'), dict_obj.get('groupId'))
+
+
 class AlgInstance(dict):
     """ Structure of an algorithm instance in the recommendation logic.
 
@@ -33,8 +89,28 @@ class AlgInstance(dict):
     @classmethod
     def _create_alg_instance(cls, alg_id, dict_obj):
         alg_class_name = 'Alg_{0}'.format(alg_id)
-        klass = globals()[alg_class_name]
-        return klass.from_dict(dict_obj)
+        try:
+            klass = globals()[alg_class_name]
+        except KeyError, ke:
+            klass = None
+        return klass.from_dict(dict_obj) if klass else Alg_UNKNOWN.from_dict(dict_obj)
+
+
+class Alg_UNKNOWN(AlgInstance):
+    """ Structure of unknown/not-supported algorithm.
+
+    Fields:
+        (As 'setting' in AlgInstance)
+    """
+    def __init__(self, weight, setting):
+        assert weight and setting and isinstance(setting, dict)
+        super(Alg_UNKNOWN, self).__init__(LogicAlgorithmId.UNKNOWN, weight, setting)
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj and dict_obj['setting']
+        setting = dict_obj['setting']
+        return cls(dict_obj['weight'], setting)
 
 
 class Alg_USER_BASED_CF(AlgInstance):
@@ -43,7 +119,7 @@ class Alg_USER_BASED_CF(AlgInstance):
     Fields:
         (As "setting" in AlgInstance)
         id (str): Fixed "USER_BASED_CF".
-        DATASOURCE (obj): An emc.DataSource instance (or a dict instance with "id" and "name").
+        DATASOURCE (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
         TIMERANGE (int): The data time range to calculate.
         action (list): A list of event actions to calculate, refer to "EventAction" enum for samples but not limited.
     """
@@ -72,7 +148,7 @@ class Alg_ITEM_BASED_CF(AlgInstance):
     Fields:
         (As 'setting' in AlgInstance)
         id (str): Fixed "ITEM_BASED_CF".
-        DATASOURCE (obj): An emc.DataSource instance (or a dict object with "id" and "name").
+        DATASOURCE (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
         TIMERANGE (int): The data time range to calculate.
         action (list): A list of event actions to calculate, refer to "EventAction" enum for samples but not limited.
     """
@@ -101,7 +177,7 @@ class Alg_RANKING(AlgInstance):
     Fields:
         (As 'setting' in AlgInstance)
         id (str): Fixed "RANKING".
-        DATASOURCE (object): An emc.DataSource instance (or a dict object with "id" and "name").
+        DATASOURCE (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
         TIMERANGE (int): The data time range to calculate.
         actionList (list): A list of event actions to calculate, refer to "EventAction" enum for samples but not
         limited.
@@ -131,6 +207,163 @@ class Alg_RANKING(AlgInstance):
         setting = dict_obj['setting']
         return cls(dict_obj['weight'], setting['DATASOURCE'], setting['TIMERANGE'], setting['actionList'],
                    setting.get('addNonCategoryRec'), setting.get('delimiter'))
+
+
+class Alg_RANKING_ITEMINFO(AlgInstance):
+    """ Structure for ranking with item info algorithm.
+
+    Fields:
+        (As 'setting' in AlgInstance)
+        id: Fixed "RANKING_ITEMINFO".
+        DATASOURCE (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
+        TIMERANGE (int): The data time range to calculate.
+        actionList (list): A list of event actions to calculate, refer to "EventAction" enum for samples but not
+        limited.
+        datasource_Iteminfo (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and
+        "name").
+        addNonCategoryRec (bool): Generate category-independent recommendation list or not.
+        delimiter (str): The delimiter in the category string for multiple levels categories.
+    """
+    def __init__(self, weight, data_source, time_range, actions, item_data_source,
+                 gen_non_category_rec=True, delimiter=None):
+        assert data_source and isinstance(data_source, dict)
+        assert time_range
+        assert actions and isinstance(actions, list)
+        assert item_data_source and isinstance(item_data_source, dict)
+        if delimiter is None:
+            delimiter = ','
+
+        setting = {
+            'id': LogicAlgorithmId.RANKING,
+            'DATASOURCE': {'id': data_source['id'], 'name': data_source['name']},
+            'TIMERANGE': time_range,
+            'actionList': actions,
+            'datasource_Iteminfo': {'id': item_data_source['id'], 'name': item_data_source['name']},
+            'addNonCategoryRec': str(bool(gen_non_category_rec)).lower(),
+            'delimiter': delimiter
+        }
+        super(Alg_RANKING_ITEMINFO, self).__init__(LogicAlgorithmId.RANKING_ITEMINFO, weight, setting)
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj and dict_obj['setting']
+        setting = dict_obj['setting']
+        return cls(dict_obj['weight'], setting['DATASOURCE'], setting['TIMERANGE'], setting['actionList'],
+                   setting['datasource_Iteminfo'],
+                   setting.get('addNonCategoryRec'), setting.get('delimiter'))
+
+
+class Alg_SEARCH2CLICK(AlgInstance):
+    """ Structure for search to click algorithm.
+
+    Fields:
+        (As 'setting' in AlgInstance)
+        id: Fixed "SEARCH2CLICK"
+        DATASOURCE (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
+        TIMERANGE (int): The data time range to calculate.
+        TIME_DECAYED (int): The time decay factor.
+        ACTION (str): The event action to calculate after the search event.
+    """
+    def __init__(self, weight, data_source, time_range, time_decay_factor, action):
+        assert data_source and isinstance(data_source, dict)
+        assert time_range
+        assert time_decay_factor
+        assert action
+        setting = {
+            'id': LogicAlgorithmId.SEARCH2CLICK,
+            'DATASOURCE': {'id': data_source['id'], 'name': data_source['name']},
+            'TIMERANGE': time_range,
+            'TIME_DECAYED': time_decay_factor,
+            'ACTION': action
+        }
+        super(Alg_SEARCH2CLICK, self).__init__(LogicAlgorithmId.SEARCH2CLICK, weight, setting)
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj and dict_obj['setting']
+        setting = dict_obj['setting']
+        return cls(dict_obj['weight'], setting['DATASOURCE'], setting['TIMERANGE'], setting['TIME_DECAYED'],
+                   setting['ACTION'])
+
+
+class Alg_Info_Integrity(AlgInstance):
+    """ Structure for item info integrity recommendation.
+    
+    Fields:
+        (As 'setting' in AlgInstance)
+        id: Fixed "Info_Integrity"
+        dataSource (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
+        attritubeList (list): The attributes used to process integrity recommendation.
+
+    Notice: "attritubeList" is the typo of "attributeList".
+    """
+    def __init__(self, weight, data_source, attributes):
+        assert data_source and isinstance(data_source, dict)
+        assert attributes and isinstance(attributes, list)
+        setting = {
+            'id': LogicAlgorithmId.INFO_INTEGRITY,
+            'dataSource': {'id': data_source['id'], 'name': data_source['name']},
+            'attritubeList': attributes
+        }
+        super(Alg_Info_Integrity, self).__init__(LogicAlgorithmId.INFO_INTEGRITY, weight, setting)
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj and dict_obj['setting']
+        setting = dict_obj['setting']
+        return cls(dict_obj['weight'], setting['dataSource'], setting['attritubeList'])
+
+
+class Alg_ALS(AlgInstance):
+    """ Structure for ALS recommendation.
+
+    Fields:
+        (As 'setting' in AlgInstance)
+        id: Fixed "ALS"
+        dataSource (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
+        timeRange (int): The data time range to calculate.
+        LAMBDA (float): The lambda value for ALS algorithm.
+    """
+    def __init__(self, weight, data_source, time_range, lambda_val=0.1):
+        assert data_source and isinstance(data_source, dict)
+        assert time_range
+        assert lambda_val
+        setting = {
+            'id': LogicAlgorithmId.ALS,
+            'dataSource': {'id': data_source['id'], 'name': data_source['name']},
+            'timeRange': time_range,
+            'LAMBDA': lambda_val
+        }
+        super(Alg_ALS, self).__init__(LogicAlgorithmId.ALS, weight, setting)
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj and dict_obj['setting']
+        setting = dict_obj['setting']
+        return cls(dict_obj['weight'], setting['dataSource'], setting['timeRange'], setting['LAMBDA'])
+
+
+class Alg_LDA(AlgInstance):
+    """ Structure for LDA context-awared recommendation.
+
+    Fields:
+        (As 'setting' in AlgInstance)
+        id: Fixed "LDA"
+        DATASOURCE (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
+    """
+    def __init__(self, weight, data_source):
+        assert data_source and isinstance(data_source, dict)
+        setting = {
+            'id': LogicAlgorithmId.LDA,
+            'DATASOURCE': {'id': data_source['id'], 'name': data_source['name']}
+        }
+        super(Alg_LDA, self).__init__(LogicAlgorithmId.LDA, weight, setting)
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj and dict_obj['setting']
+        setting = dict_obj['setting']
+        return cls(dict_obj['weight'], setting['DATASOURCE'])
 
 
 class UserFilter(dict):
@@ -345,17 +578,48 @@ class ER3(BaseApp):
                                   api_base=api_base if api_base else self.__API_BASE,
                                   shiro_cas_base=shiro_cas_base if shiro_cas_base else self.__SHIRO_CAS_BASE)
 
+    # Group #
+    def get_groups(self):
+        """ Get group (list).
+
+        Depending on the authorization of the user, the group(s) returned would be different. For a normal user, it is
+        most likely only the group which the user belongs to.
+
+        Arguments:
+        Return:
+            A list of ERGroup instances.
+        """
+        res = self.request_get('/group')
+        return [ERGroup.from_dict(x) for x in res]
+
+    # Data source #
+    def get_data_sources(self, group):
+        """ Get data source list in a group.
+
+        Only the data sources in the group authorized to ER are returned, and it may be just a subset of the list
+        returned from the same API in EMC.
+
+        Arguments:
+            group (obj or int): The emc.Group instance, ERGroup instance, or group id to get.
+        Return:
+            A list of ERDataSource instances.
+        """
+        assert group
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, ERGroup) else int(group)
+        res = self.request_get('/group/{0}/data-source'.format(group_id))
+        return [ERDataSource.from_dict(x) for x in res]
+
     # Logic #
     def get_logics(self, group):
         """ Get the recommendation logics in a group.
 
         Arguments:
-            group (obj or int): The Group instance or group id to get.
+            group (obj or int): The emc.Group instance, ERGroup instance, or group id to get.
         Return:
             A list of Logic instances.
         """
         assert group
-        group_id = group['id'] if isinstance(group, Group) else int(group)
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, ERGroup) else int(group)
         res = self.request_get('/group/{0}/logic'.format(group_id))
         return [Logic.from_dict(x) for x in res]
 
@@ -363,13 +627,13 @@ class ER3(BaseApp):
         """ Add a new recommendation logic to a group.
 
         Arguments:
-            group (obj or int): The Group instance or group id to add logic.
+            group (obj or int): The emc.Group instance, ERGroup instance, or group id to add logic.
             logic (obj): The Logic instance to add.
         Return:
             A Logic instance as the added one (with fields filled by server, e.g. createTime).
         """
         assert group and logic and isinstance(logic, Logic)
-        group_id = group['id'] if isinstance(group, Group) else int(group)
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, ERGroup) else int(group)
         res = self.request_post('/group/{0}/logic'.format(group_id), logic)
         return Logic.from_dict(res)
 
@@ -407,12 +671,12 @@ class ER3(BaseApp):
         """ Get the campaigns in a group.
 
         Arguments:
-            group (obj or int): The Group instance or group id to get.
+            group (obj or int): The emc.Group instance, ERGroup instance, or group id to get.
         Return:
             A list of Campaign instances.
         """
         assert group
-        group_id = group['id'] if isinstance(group, Group) else int(group)
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, ERGroup) else int(group)
         res = self.request_get('/group/{0}/campaign'.format(group_id))
         return [Campaign.from_dict(x) for x in res]
 
@@ -420,13 +684,13 @@ class ER3(BaseApp):
         """ Add a new campaign to a group.
 
         Arguments:
-            group (obj or int): The Group instance or group id to add campaign.
+            group (obj or int): The emc.Group instance, ERGroup instance, or group id to add campaign.
             campaign (obj): The Campaign instance to add.
         Return:
             A Campaign instance as the added one (with fields filled by server, e.g. createTime).
         """
         assert group and campaign and isinstance(campaign, Campaign)
-        group_id = group['id'] if isinstance(group, Group) else int(group)
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, ERGroup) else int(group)
         res = self.request_post('/group/{0}/campaign'.format(group_id), campaign)
         return Campaign.from_dict(res)
 
@@ -464,12 +728,12 @@ class ER3(BaseApp):
         """ Get the user filters in a group.
 
         Arguments:
-            group (obj or int): The Group instance or group id to get.
+            group (obj or int): The emc.Group instance, ERGroup instance, or group id to get.
         Return:
             A list of UserFilter instances.
         """
         assert group
-        group_id = group['id'] if isinstance(group, Group) else int(group)
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, ERGroup) else int(group)
         res = self.request_get('/group/{0}/userfilter'.format(group_id))
         return [UserFilter.from_dict(x) for x in res]
 
@@ -480,14 +744,14 @@ class ER3(BaseApp):
         The file format is standard CSV, and include at least a "uid" column as the user/customer id list.
 
         Arguments:
-            group (obj or int): The Group instance or group id to add user filter.
+            group (obj or int): The emc.Group instance, ERGroup instance, or group id to add user filter.
             user_filter (obj): The UserFilter instance to add.
             file_path (str): The file path of the user list to upload.
         Return:
             A UserFilter instance as the added one (with fields filled by server, e.g. createTime).
         """
         assert group and user_filter and isinstance(user_filter, UserFilter)
-        group_id = group['id'] if isinstance(group, Group) else int(group)
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, ERGroup) else int(group)
         res = self.request_upload('/group/{0}/userfilter'.format(group_id), user_filter, file_path)
         return UserFilter.from_dict(res)
 

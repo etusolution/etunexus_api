@@ -48,14 +48,15 @@ class LogicAvlItemFilterMode(object):
 
 class LogicAlgorithmId(object):
     """ Enumeration of recommendation algorithm samples """
-    INFO_INTEGRITY = 'Info_Integrity'
+    UNKNOWN = 'UNKNOWN'
+    USER_BASED_CF = 'USER_BASED_CF'
     ITEM_BASED_CF = 'ITEM_BASED_CF'
-    LDA = 'LDA'
     RANKING = 'RANKING'
     RANKING_ITEMINFO = 'RANKING_ITEMINFO'
     SEARCH2CLICK = 'SEARCH2CLICK'
-    USER_BASED_CF = 'USER_BASED_CF'
+    INFO_INTEGRITY = 'Info_Integrity'
     ALS = 'ALS'
+    LDA = 'LDA'
 
 
 class EventAction(object):

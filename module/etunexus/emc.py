@@ -185,9 +185,9 @@ class DataSource(dict):
         type (str): The data source type (how to get data), refer to 'DataSourceType' enum for valid values
 
         eventCollector (obj): An EventCollector object if type is 'EVENT_COLLECTOR'
-        importer (obj): An Importer object if type is 'IMPORTER'
-        fetch (obj): An Fetch object if type is 'FETCH'
-        upload (obj): An Upload object if type is 'UPLOAD'
+        importer (obj): An Importer object if type is 'IMPORTER' (NOT SUPPORTED YET)
+        fetch (obj): An Fetch object if type is 'FETCH' (NOT SUPPORTED YET)
+        upload (obj): An Upload object if type is 'UPLOAD' (NOT SUPPORTED YET)
 
         id (int): Data source auto id
         groupId (int): Group auto id
