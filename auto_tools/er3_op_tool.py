@@ -40,7 +40,7 @@ def promise_prompt(prompt, default=None):
     answer = None
     while answer is None or (not answer and not default):
         answer = raw_input(prompt)
-    return answer if answer else default
+    return unicode(answer, encoding=sys.stdin.encoding) if answer else default
 
 
 class AuthInfo():
