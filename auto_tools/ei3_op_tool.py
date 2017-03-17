@@ -277,7 +277,7 @@ def add_new_bands(ei3, group, user, data_source):
         Band(category=cat_dict[u'1.活躍客群統計'], name=u'沉睡客群', description='', type=BandType.COMBINE,
              target_band=BandCombine([band_id_dict[u'30日內總訪客數'], band_id_dict[u'7日內總訪客數']], [BandCombineOperator.EXCEPT])),
         Band(category=cat_dict[u'1.活躍客群統計'], name=u'流失客群', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'90日內總訪客數'], band_id_dict[u'90日內總訪客數']], [BandCombineOperator.EXCEPT])),
+             target_band=BandCombine([band_id_dict[u'90日內總訪客數'], band_id_dict[u'30日內總訪客數']], [BandCombineOperator.EXCEPT])),
         # 2.潛力消費名單
         Band(category=cat_dict[u'2.潛力消費名單'], name=u'昨日無消費', description='', type=BandType.COMBINE,
              target_band=BandCombine([band_id_dict[u'昨日訪客數'], band_id_dict[u'昨日曾消費']], [BandCombineOperator.EXCEPT])),
