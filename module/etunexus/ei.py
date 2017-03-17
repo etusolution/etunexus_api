@@ -537,7 +537,9 @@ class EI3(BaseApp):
         band_category_id = band_category['id'] if isinstance(band_category, BandCategory) else int(band_category)
         assert band_category_id
         res = self.request_del('/bandcategory/{0}'.format(band_category_id))
-        res_id = res['data']['id']
+        # For unknown reason, delete category returns a list. Leave a possible change in the future that it might become
+        # a simple dict
+        res_id = res['data'][0]['id'] if isinstance(res['data'], list) else res['data']['id']
         assert res_id == band_category_id
         return res_id
 

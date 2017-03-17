@@ -217,7 +217,7 @@ class BaseApp(object):
             return json.loads(res)
         except ValueError as e:
             self._logger.error('%s error: Illegal response (%s) from server' % (traceback.extract_stack()[-3][2], res))
-            raise e
+            raise
 
     def _download(self, url, save_path):
         self._check_login()
