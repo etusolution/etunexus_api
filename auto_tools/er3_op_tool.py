@@ -13,18 +13,20 @@ from etunexus.er import *
 from etunexus.ei import *
 from etunexus.enum import *
 
-# ERIO
-DEF_CAS_HOST = 'emc.online.etunexus.com'
-DEF_EMC2_HOST = 'emc.online.etunexus.com'
-DEF_ER3_HOST = 'erhome.online.etunexus.com'
-SECURITY_CHECK = True
-LOGGING_LEVEL = logging.INFO
-# Testing
-# DEF_CAS_HOST = 'sso.etu.im'
-# DEF_EMC2_HOST = 'etumaster.etu.im'
-# DEF_ER3_HOST = 'etumaster.etu.im'
-# SECURITY_CHECK = False
-# LOGGING_LEVEL = logging.INFO
+if False:
+    # ERIO
+    DEF_CAS_HOST = 'emc.online.etunexus.com'
+    DEF_EMC2_HOST = 'emc.online.etunexus.com'
+    DEF_ER3_HOST = 'erhome.online.etunexus.com'
+    SECURITY_CHECK = True
+    LOGGING_LEVEL = logging.INFO
+else:
+    # 219 Testing
+    DEF_CAS_HOST = 'sso.etu.im'
+    DEF_EMC2_HOST = 'etumaster.etu.im'
+    DEF_ER3_HOST = 'etumaster.etu.im'
+    SECURITY_CHECK = False
+    LOGGING_LEVEL = logging.INFO
 
 app_name = 'Etu Recommender'
 
@@ -283,7 +285,7 @@ def get_exist_group(emc2):
     return group
 
 
-def suspend_logics(emc2, er3, suspend_group):
+def suspend_logics(er3, suspend_group):
     logics = er3.get_logics(suspend_group)
     for logic in logics:
         logic['active'] = False
@@ -295,32 +297,50 @@ def suspend_logics(emc2, er3, suspend_group):
 def suspend_datasource(emc2, suspend_group):
     dss = emc2.get_data_sources(suspend_group)
     for ds in dss:
-        ds['appIds'].remove(AppId.ER)
-        logger.info('Removing ER authorization for data source (%s)...' % ds['name'])
-        emc2.update_data_source(ds)
-        logger.info('Done.')
+        logger.info('Checking data source (%s)...' % ds['name'])
 
-        exporter_setting = emc2.get_exporter_setting(ds)
-        exporter_setting['enabled'] = False
-        logger.info('Disabling exporter for data source (%s)...' % ds['name'])
-        emc2.update_exporter_setting(ds, exporter_setting)
-        logger.info('Done.')
+        if AppId.ER in ds['appIds']:
+            ds['appIds'].remove(AppId.ER)
+            logger.info('Removing ER authorization for data source (%s)...' % ds['name'])
+            emc2.update_data_source(ds)
+            logger.info('Done.')
+        else:
+            logger.info('Data source (%s) is not ER authorized.' % ds['name'])
+
+        disable_exporter = True if len(ds['appIds']) == 0 \
+            else True if len(ds['appIds']) == 1 and ds['appIds'][0] == AppId.EMC \
+            else False
+        if disable_exporter:
+            exporter_setting = emc2.get_exporter_setting(ds)
+            exporter_setting['enabled'] = False
+            logger.info('No other application uses it. Disabling exporter for data source (%s)...' % ds['name'])
+            emc2.update_exporter_setting(ds, exporter_setting)
+            logger.info('Done.')
+        else:
+            logger.info('Other application is still using it. Do not disable exporter.')
 
 
 def remove_user(emc2, suspend_group):
     users = emc2.get_users(suspend_group)
     for user in users:
-        logger.info('Removing user (%s)...' % user['name'])
-        emc2.del_user(user)
-        logger.info('Done.')
+        logger.info('Removing ER authorization from user (%s).' % user['name'])
+        user['roles'] = filter(lambda x: x['appId'] != AppId.ER, user['roles'])
+        if len(user['roles']) == 0:
+            logger.info('No other application authorization. Removing user (%s)...' % user['name'])
+            emc2.del_user(user)
+            logger.info('Done.')
+        else:
+            logger.info('Updating user (%s)...' % user['name'])
+            emc2.update_user(user)
+            logger.info('Done.')
 
 
 def func_suspend_customer(emc2, er3):
     try:
-        while (True):
+        while True:
             suspend_group = get_exist_group(emc2)
             if suspend_group is not None:
-                suspend_logics(emc2, er3, suspend_group)
+                suspend_logics(er3, suspend_group)
                 suspend_datasource(emc2, suspend_group)
                 remove_user(emc2, suspend_group)
 

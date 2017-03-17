@@ -13,18 +13,20 @@ from etunexus.er import *
 from etunexus.ei import *
 from etunexus.enum import *
 
-# ERIO
-DEF_CAS_HOST = 'emc.online.etunexus.com'
-DEF_EMC2_HOST = 'emc.online.etunexus.com'
-DEF_EI3_HOST = 'eihome.online.etunexus.com'
-SECURITY_CHECK = True
-LOGGING_LEVEL = logging.INFO
-# Testing
-# DEF_CAS_HOST = 'sso.etu.im'
-# DEF_EMC2_HOST = 'etumaster.etu.im'
-# DEF_EI3_HOST = 'etumaster.etu.im'
-# SECURITY_CHECK = False
-# LOGGING_LEVEL = logging.INFO
+if False:
+    # ERIO
+    DEF_CAS_HOST = 'emc.online.etunexus.com'
+    DEF_EMC2_HOST = 'emc.online.etunexus.com'
+    DEF_EI3_HOST = 'eihome.online.etunexus.com'
+    SECURITY_CHECK = True
+    LOGGING_LEVEL = logging.INFO
+else:
+    # 219 Testing
+    DEF_CAS_HOST = 'sso.etu.im'
+    DEF_EMC2_HOST = 'etumaster.etu.im'
+    DEF_EI3_HOST = 'etumaster.etu.im'
+    SECURITY_CHECK = False
+    LOGGING_LEVEL = logging.DEBUG
 
 app_name = 'Etu Insight'
 
@@ -128,7 +130,7 @@ def add_new_user(emc2, group):
         # Check the user is EI-authorized
         user_roles = user['roles']
         if len(filter(lambda x: x['appId'] == AppId.EI, user_roles)) == 0:
-            logger.info('But the user is not ER-authorized. Adding the authorization...')
+            logger.info('But the user is not EI-authorized. Adding the authorization...')
             user['roles'].append(UserRole(AppRoleName.VIEWER, AppId.EI))
             emc2.update_user(user)
             logger.info('Done.')
@@ -151,24 +153,24 @@ def add_new_data_source(emc2, group):
     ds_name = '%srec' % group['name']
 
     dss = emc2.get_data_sources(group)
-    matched_dss = filter(lambda x: x['name']==ds_name, dss)
+    matched_dss = filter(lambda x: x['name'] == ds_name, dss)
     if len(matched_dss) > 0:
-        logger.info('Existing data source. No need to add new user.')
+        logger.info('Existing data source. No need to add new data source.')
         ds = matched_dss[0]
 
-        # Check the data source is ER-authorized
+        # Check the data source is EI-authorized
         ds_app_ids = ds['appIds']
-        if len(filter(lambda x: x == AppId.ER, ds_app_ids)) == 0:
-            logger.info('But the data source is not ER-authorized. Adding the authorization...')
-            ds['appIds'].append(AppId.ER)
+        if len(filter(lambda x: x == AppId.EI, ds_app_ids)) == 0:
+            logger.info('But the data source is not EI-authorized. Adding the authorization...')
+            ds['appIds'].append(AppId.EI)
             emc2.update_data_source(ds)
             logger.info('Done.')
         else:
-            logger.info('The data source is also ER-authorized.')
+            logger.info('The data source is also EI-authorized.')
 
     else:
         ds_display = u'%s 行為資料' % group['displayName']
-        ds_app_ids = [AppId.EMC, AppId.ER]
+        ds_app_ids = [AppId.EMC, AppId.EI]
         ds_domain = '*'
         ds = DataSource(ds_name, ds_display, app_ids=ds_app_ids, content_type=DataSourceContentType.BEHAVIOR)
         ds.init_event_collector(ds_domain)
@@ -185,6 +187,14 @@ def add_new_data_source(emc2, group):
 
 
 def add_new_bands(ei3, group, user, data_source):
+
+    # Force sync EI to EMC data before process band management
+    try:
+        res = ei3.request_get('/sync?groupName={0}'.format(group['name']))
+    except ValueError:
+        logger.info('No problem for the error message above. Please ignore it.')
+        pass
+
     ei3.do_su_login(group, user)
 
     # Get all band categories of the simulated user
@@ -316,6 +326,224 @@ def add_new_bands(ei3, group, user, data_source):
     ei3.do_su_logout()
 
 
+def func_new_customer(emc2, ei3):
+    try:
+        while True:
+            new_group = add_new_group(emc2)
+            if new_group is not None:
+                new_user = add_new_user(emc2, new_group)
+                new_ds = add_new_data_source(emc2, new_group)
+                add_new_bands(ei3, new_group, new_user, new_ds)
+
+            go_next = promise_prompt('Do you want to create another one (Y/n) [n]? ', 'n')
+            if go_next.lower() != 'y':
+                break
+    except KeyboardInterrupt, ki:
+        return 1
+    except Exception, e:
+        logger.error('Failed to complete the process. Please check the error and try again.')
+        logger.error('Error message: ' + str(e))
+        return 2
+
+
+def get_exist_group(emc2):
+    group_name = promise_prompt('Please input customer group name: ')
+    groups = emc2.get_groups()
+    matched_groups = filter(lambda x: x['name'] == group_name, groups)
+    if len(matched_groups) == 0:
+        logger.warn('Group (%s) does not exist. Please check and try again.' % group_name)
+        return None
+
+    group = matched_groups[0]
+    return group
+
+
+def remove_bands(emc2, ei3, suspend_group):
+    users = emc2.get_users(suspend_group)
+    for user in users:
+        logger.info('Removing bands of user (%s)...' % user['name'])
+
+        # Do su login first to get per-user bandcats/bands
+        ei3.do_su_login(suspend_group, user)
+
+        band_cats = ei3.get_band_categories()
+        # Remove combined bands from all categories first
+        for band_cat in band_cats:
+            for band in filter(lambda b: b['type'] == BandType.COMBINE, band_cat['bands']):
+                logger.info('Removing band (%s) from band category (%s)...' % (band['name'], band_cat['name']))
+                ei3.del_band(band)
+                logger.info('Done.')
+
+        band_cats = ei3.get_band_categories()
+        # Remove all other bands and categories
+        for band_cat in band_cats:
+            # Remove combined bands first
+            for band in band_cat['bands']:
+                logger.info('Removing band (%s) from band category (%s)...' % (band['name'], band_cat['name']))
+                ei3.del_band(band)
+                logger.info('Done.')
+
+            logger.info('Removing band category (%s)...' % band_cat['name'])
+            ei3.del_band_category(band_cat)
+            logger.info('Done.')
+
+        ei3.do_su_logout()
+
+
+def suspend_datasource(emc2, suspend_group):
+    dss = emc2.get_data_sources(suspend_group)
+    for ds in dss:
+        logger.info('Checking data source (%s)...' % ds['name'])
+
+        if AppId.EI in ds['appIds']:
+            ds['appIds'].remove(AppId.EI)
+            logger.info('Removing EI authorization for data source (%s)...' % ds['name'])
+            emc2.update_data_source(ds)
+            logger.info('Done.')
+        else:
+            logger.info('Data source (%s) is not EI authorized.' % ds['name'])
+
+        disable_exporter = True if len(ds['appIds']) == 0 \
+            else True if len(ds['appIds']) == 1 and ds['appIds'][0] == AppId.EMC \
+            else False
+        if disable_exporter:
+            exporter_setting = emc2.get_exporter_setting(ds)
+            exporter_setting['enabled'] = False
+            logger.info('No other application uses it. Disabling exporter for data source (%s)...' % ds['name'])
+            emc2.update_exporter_setting(ds, exporter_setting)
+            logger.info('Done.')
+        else:
+            logger.info('Other application is still using it. Do not disable exporter.')
+
+
+def remove_user(emc2, suspend_group):
+    users = emc2.get_users(suspend_group)
+    for user in users:
+        logger.info('Removing EI authorization from user (%s).' % user['name'])
+        user['roles'] = filter(lambda x: x['appId'] != AppId.EI, user['roles'])
+        if len(user['roles']) == 0:
+            logger.info('No other application authorization. Removing user (%s)...' % user['name'])
+            emc2.del_user(user)
+            logger.info('Done.')
+        else:
+            logger.info('Updating user (%s)...' % user['name'])
+            emc2.update_user(user)
+            logger.info('Done.')
+
+
+def func_suspend_customer(emc2, ei3):
+    try:
+        while True:
+            suspend_group = get_exist_group(emc2)
+            if suspend_group is not None:
+                remove_bands(emc2, ei3, suspend_group)
+                suspend_datasource(emc2, suspend_group)
+                remove_user(emc2, suspend_group)
+
+            go_next = promise_prompt('Do you want to suspend another one (Y/n) [n]? ', 'n')
+            if go_next.lower() != 'y':
+                break
+    except KeyboardInterrupt, ki:
+        return 1
+    except Exception, e:
+        logger.error('Failed to complete the process. Please check the error and try again.')
+        logger.error('Error message: ' + str(e))
+        raise
+        return 2
+
+    return 0
+
+
+def func_exit():
+    return 0
+
+
+class Menu(object):
+
+    class Option(object):
+        def __init__(self, menu_key, menu_display, menu_func, func_args=None):
+            self._menu_key = menu_key
+            self._menu_display = menu_display
+            self._menu_func = menu_func
+            self._func_args = func_args if func_args is not None else []
+
+        @property
+        def menu_key(self):
+            return self._menu_key
+
+        @property
+        def menu_display(self):
+            return self._menu_display
+
+        @property
+        def menu_func(self):
+            return self._menu_func
+
+        @property
+        def func_args(self):
+            return self._func_args
+
+    def __init__(self, title):
+        self._title = title
+        self._options = []
+        self._indicator = ">>> "
+
+    @property
+    def title(self):
+        return self._title
+
+    @title.setter
+    def title(self, value):
+        self._title = value
+
+    @property
+    def indicator(self):
+        return self._indicator
+
+    @indicator.setter
+    def indicator(self, value):
+        self._indicator = value
+
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, value):
+        self._options = value
+
+    @staticmethod
+    def cls():
+        os.system('cls' if os.name == 'nt' else 'clear')
+
+    def show(self):
+        print self.title
+        print
+        for option in self.options:
+            print '{0}) {1}'.format(option.menu_key, option.menu_display)
+        print
+
+    def input(self):
+        selected = promise_prompt(self.indicator)
+        for option in self.options:
+            if option.menu_key.lower() == selected.lower():
+                return option
+
+        return None
+
+    def open(self):
+        option = None
+
+        ret = None
+        while option is None:
+            self.show()
+            option = self.input()
+            if option is not None:
+                ret = option.menu_func(*option.func_args)
+
+        return ret
+
+
 def main():
     os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -345,23 +573,15 @@ def main():
 
     logger.info('Done.')
 
-    try:
-        while True:
-            new_group = add_new_group(emc2)
-            if new_group is not None:
-                new_user = add_new_user(emc2, new_group)
-                new_ds = add_new_data_source(emc2, new_group)
-                add_new_bands(ei3, new_group, new_user, new_ds)
+    main_menu = Menu('Please select the function to proceed: ')
+    main_menu.options = [
+        Menu.Option('1', 'Add/Resume a customer', func_new_customer, [emc2, ei3]),
+        Menu.Option('2', 'Suspend a customer', func_suspend_customer, [emc2, ei3]),
+        Menu.Option('E', 'Exit', func_exit)
+    ]
+    return main_menu.open()
 
-            go_next = promise_prompt('Do you want to create another one (Y/n) [n]? ', 'n')
-            if go_next.lower() != 'y':
-                break
-    except KeyboardInterrupt, ki:
-        return 1
-    except Exception, e:
-        logger.error('Failed to complete the process. Please check the error and try again.')
-        logger.error('Error message: ' + str(e))
-        return 2
+
 
 # End of main
 
