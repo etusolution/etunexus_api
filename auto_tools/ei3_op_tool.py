@@ -13,7 +13,7 @@ from etunexus.er import *
 from etunexus.ei import *
 from etunexus.enum import *
 
-if False:
+if True:
     # ERIO
     DEF_CAS_HOST = 'emc.online.etunexus.com'
     DEF_EMC2_HOST = 'emc.online.etunexus.com'
