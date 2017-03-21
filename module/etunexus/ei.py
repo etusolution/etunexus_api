@@ -700,7 +700,7 @@ class EI3(BaseApp):
             A list of PopulationSummary instances.
         """
         assert gene and data_source
-        gene_id = gene['id'] if isinstance(gene, Gene) else int(gene)
+        gene_id = gene['id'] if isinstance(gene, Gene) else str(gene)
         data_source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
         res = self.request_get('/population/summary?geneId={0}&cId={1}'.format(gene_id, data_source_id))
         return [PopulationSummary.from_dict(x) for x in res['data']]
