@@ -9,6 +9,7 @@ import logging
 import traceback
 
 from cas import CAS
+from logger import get_logger
 
 
 class BaseApp(object):
@@ -48,7 +49,7 @@ class BaseApp(object):
         self._shiro_cas_base = shiro_cas_base
 
         self._st = None
-        self._logger = logging.getLogger('etu.nexus')
+        self._logger = get_logger()
 
     @property
     def app_name(self):

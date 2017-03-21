@@ -9,6 +9,7 @@ import logging
 import MultipartPostHandler
 
 from . import API_USER_AGENT
+from logger import get_logger
 
 
 class CAS(object):
@@ -45,22 +46,12 @@ class CAS(object):
 
         self._cas_host = self.__sso_cas_host if not cas_host else cas_host
         self._tgt = None
-        self._logger = logging.getLogger('etu.nexus')
+        self._logger = get_logger(loglevel)
 
-        # Init logger
-        self._init_logger(level=loglevel)
         # Init urllib2
         self._init_urllib(secure)
 
         self._logger.debug("CAS object (%s,%s,%s,%s) constructed" % (cas_host, cas_group, cas_username, cas_password))
-
-    def _init_logger(self, level):
-        self._logger.setLevel(level)
-        if not len(self._logger.handlers):
-            ch = logging.StreamHandler()
-            ch.setLevel(logging.DEBUG)
-            ch.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s:%(lineno)d - %(message)s'))
-            self._logger.addHandler(ch)
 
     def _init_urllib(self, secure, debuglevel=0):
         cj = cookielib.CookieJar()
