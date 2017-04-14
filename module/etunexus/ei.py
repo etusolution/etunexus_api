@@ -132,7 +132,7 @@ class BandGene(dict):
     """
 
     def __init__(self, gene_id, data_source, operator, operand):
-        assert gene_id and data_source and operator and operand
+        assert gene_id and data_source >= 0 and operator and operand is not None
         super(BandGene, self).__init__({
             'geneId': gene_id,
             'cid': data_source['id'] if isinstance(data_source, DataSource) else int(data_source),
@@ -184,6 +184,8 @@ class Band(dict):
         snapshotInfo (obj): A SnapshotInfo instance. For a pure band, it's an SnapshopInfo with no parent and empty
         children.
 
+        shared (bool): The band is shared in group or not.
+
         id (int): The auto id.
         amount (int): Amount of users in the band.
         updateTime (long): The band update time in Epoch (milliseconds).
@@ -192,6 +194,7 @@ class Band(dict):
     def __init__(self, category, name, description,
                  type, target_gene=None, target_band=None,
                  need_refresh=True, snapshot_info=None,
+                 shared=False,
                  id=None, amount=None, update_time=None):
         super(Band, self).__init__({
             'categoryId': category['id'] if isinstance(category, BandCategory) else int(category),
@@ -205,6 +208,7 @@ class Band(dict):
                 else BandCombine.from_dict(target_band) if target_band is not None else None,
             'snapshotInfo': snapshot_info if isinstance(snapshot_info, SnapshotInfo)
                 else SnapshotInfo.from_dict(snapshot_info) if snapshot_info is not None else SnapshotInfo(),
+            'shared': shared,
 
             'id': id,
             'amount': amount,
@@ -217,6 +221,7 @@ class Band(dict):
         return cls(dict_obj['categoryId'], dict_obj['name'], dict_obj['description'],
                    dict_obj['type'], dict_obj.get('targetGene'), dict_obj.get('targetBand'),
                    dict_obj['needRefresh'], dict_obj.get('snapshotInfo'),
+                   dict_obj.get('shared'),
                    dict_obj.get('id'), dict_obj.get('amount'), dict_obj.get('updateTime'))
 
     @classmethod
@@ -226,6 +231,7 @@ class Band(dict):
         return cls(category_id, dict_obj['name'], dict_obj['description'],
                    dict_obj['type'], dict_obj.get('targetGene'), dict_obj.get('targetBand'),
                    dict_obj['needRefresh'], dict_obj.get('snapshotInfo'),
+                   dict_obj.get('shared'),
                    dict_obj.get('id'), dict_obj.get('amount'), dict_obj.get('updateTime'))
 
 
