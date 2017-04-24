@@ -186,7 +186,7 @@ def add_new_data_source(emc2, group):
     return ds
 
 
-def add_new_bands(ei3, group, user, data_source):
+def add_new_bands(ei3, group, data_source):
 
     # Force sync EI to EMC data before process band management
     try:
@@ -195,7 +195,8 @@ def add_new_bands(ei3, group, user, data_source):
         logger.info('No problem for the error message above. Please ignore it.')
         pass
 
-    ei3.do_su_login(group, user)
+    group_def_username = '{0}_DefaultOperator'.format(group['name'])
+    ei3.do_su_login(group, group_def_username)
 
     # Get all band categories of the simulated user
     categories = ei3.get_band_categories()
@@ -217,6 +218,7 @@ def add_new_bands(ei3, group, user, data_source):
             logger.info('Category (%s) already exist. No need to add new.' % category['name'])
         else:
             logger.info('Adding category (%s)...' % category['name'])
+            category['isDefault'] = True
             ei3.add_band_category(category)
             logger.info('Done.')
 
@@ -228,42 +230,58 @@ def add_new_bands(ei3, group, user, data_source):
     gene_bands = [
         # 客戶解析(7日)
         Band(category=cat_dict[u'客戶解析(7日)'], name=u'7日內總訪客數', description='',type=BandType.GENE,
-             target_gene=BandGene('Login_7', data_source, BandGeneOperator.GE, '1')),
+             target_gene=BandGene('Login_7', data_source, BandGeneOperator.GE, '1'),
+             shared=True),
         Band(category=cat_dict[u'客戶解析(7日)'], name=u'7日內曾消費客戶', description='',type=BandType.GENE,
-             target_gene=BandGene('Orders_7', data_source, BandGeneOperator.GE, '1')),
+             target_gene=BandGene('Orders_7', data_source, BandGeneOperator.GE, '1'),
+             shared=True),
         Band(category=cat_dict[u'客戶解析(7日)'], name=u'昨日曾消費', description='',type=BandType.GENE,
-             target_gene=BandGene('Orders_1', data_source, BandGeneOperator.GE, '1')),
+             target_gene=BandGene('Orders_1', data_source, BandGeneOperator.GE, '1'),
+             shared=True),
         # 客戶解析(30日)
         Band(category=cat_dict[u'客戶解析(30日)'], name=u'30日內總訪客數', description='',type=BandType.GENE,
-             target_gene=BandGene('Login_30', data_source, BandGeneOperator.GE, '1')),
+             target_gene=BandGene('Login_30', data_source, BandGeneOperator.GE, '1'),
+             shared=True),
         Band(category=cat_dict[u'客戶解析(30日)'], name=u'最近30天造訪3次以上', description='',type=BandType.GENE,
-             target_gene=BandGene('Session_30', data_source, BandGeneOperator.GE, '3')),
+             target_gene=BandGene('Session_30', data_source, BandGeneOperator.GE, '3'),
+             shared=True),
         Band(category=cat_dict[u'客戶解析(30日)'], name=u'30日內曾消費客戶', description='',type=BandType.GENE,
-             target_gene=BandGene('Orders_30', data_source, BandGeneOperator.GE, '1')),
+             target_gene=BandGene('Orders_30', data_source, BandGeneOperator.GE, '1'),
+             shared=True),
         # 客戶解析(90日)
         Band(category=cat_dict[u'客戶解析(90日)'], name=u'90日內總訪客數', description='',type=BandType.GENE,
-             target_gene=BandGene('Login_90', data_source, BandGeneOperator.GE, '1')),
+             target_gene=BandGene('Login_90', data_source, BandGeneOperator.GE, '1'),
+             shared=True),
         Band(category=cat_dict[u'客戶解析(90日)'], name=u'最近90天造訪3次以上', description='',type=BandType.GENE,
-             target_gene=BandGene('Session_30', data_source, BandGeneOperator.GE, '3')),
+             target_gene=BandGene('Session_30', data_source, BandGeneOperator.GE, '3'),
+             shared=True),
         Band(category=cat_dict[u'客戶解析(90日)'], name=u'90日內曾消費客戶', description='',type=BandType.GENE,
-             target_gene=BandGene('Orders_90', data_source, BandGeneOperator.GE, '1')),
+             target_gene=BandGene('Orders_90', data_source, BandGeneOperator.GE, '1'),
+             shared=True),
         # 客戶消費力
         Band(category=cat_dict[u'客戶消費力'], name=u'消費力前20%', description='',type=BandType.GENE,
-             target_gene=BandGene('RevenueDist_30', data_source, BandGeneOperator.GE, '80')),
+             target_gene=BandGene('RevenueDist_30', data_source, BandGeneOperator.GE, '80'),
+             shared=True),
         Band(category=cat_dict[u'客戶消費力'], name=u'訂單數大於等於平均', description='',type=BandType.GENE,
-             target_gene=BandGene('Orders_90', data_source, BandGeneOperator.GE, '2')),
+             target_gene=BandGene('Orders_90', data_source, BandGeneOperator.GE, '2'),
+             shared=True),
         Band(category=cat_dict[u'客戶消費力'], name=u'訂單數小於平均', description='',type=BandType.GENE,
-             target_gene=BandGene('Orders_90', data_source, BandGeneOperator.LT, '2')),
+             target_gene=BandGene('Orders_90', data_source, BandGeneOperator.LT, '2'),
+             shared=True),
         Band(category=cat_dict[u'客戶消費力'], name=u'消費金額大於等於平均', description='',type=BandType.GENE,
-             target_gene=BandGene('RevenueAvg_90', data_source, BandGeneOperator.GE, '250')),
+             target_gene=BandGene('RevenueAvg_90', data_source, BandGeneOperator.GE, '250'),
+             shared=True),
         Band(category=cat_dict[u'客戶消費力'], name=u'消費金額小於平均', description='',type=BandType.GENE,
-             target_gene=BandGene('RevenueAvg_90', data_source, BandGeneOperator.LT, '250')),
+             target_gene=BandGene('RevenueAvg_90', data_source, BandGeneOperator.LT, '250'),
+             shared=True),
         # 1.活躍客群統計
         Band(category=cat_dict[u'1.活躍客群統計'], name=u'昨日訪客數', description='',type=BandType.GENE,
-             target_gene=BandGene('Login_7', data_source, BandGeneOperator.GE, '1')),
+             target_gene=BandGene('Login_7', data_source, BandGeneOperator.GE, '1'),
+             shared=True),
         # 4.核心關注客群
         Band(category=cat_dict[u'4.核心關注客群'], name=u'高度貢獻客群', description='',type=BandType.GENE,
-             target_gene=BandGene('RevenueDist_90', data_source, BandGeneOperator.GE, '95')),
+             target_gene=BandGene('RevenueDist_90', data_source, BandGeneOperator.GE, '95'),
+             shared=True),
     ]
     for band in gene_bands:
         exist_band = filter(lambda x: x['categoryId'] == band['categoryId'] and x['name'] == band['name'], bands)
@@ -271,6 +289,7 @@ def add_new_bands(ei3, group, user, data_source):
             logger.info('Band (%s) already exist. No need to add new.' % band['name'])
         else:
             logger.info('Adding band (%s)...' % band['name'])
+            band['isDefault'] = True
             ei3.add_band(band)
             logger.info('Done.')
 
@@ -283,36 +302,50 @@ def add_new_bands(ei3, group, user, data_source):
     combine_bands = [
         # 1.活躍客群統計
         Band(category=cat_dict[u'1.活躍客群統計'], name=u'新沉睡戶客群', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'7日內總訪客數'], band_id_dict[u'昨日訪客數']], [BandCombineOperator.EXCEPT])),
+             target_band=BandCombine([band_id_dict[u'7日內總訪客數'], band_id_dict[u'昨日訪客數']], [BandCombineOperator.EXCEPT]),
+             shared=True),
         Band(category=cat_dict[u'1.活躍客群統計'], name=u'沉睡客群', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'30日內總訪客數'], band_id_dict[u'7日內總訪客數']], [BandCombineOperator.EXCEPT])),
+             target_band=BandCombine([band_id_dict[u'30日內總訪客數'], band_id_dict[u'7日內總訪客數']], [BandCombineOperator.EXCEPT]),
+             shared=True),
         Band(category=cat_dict[u'1.活躍客群統計'], name=u'流失客群', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'90日內總訪客數'], band_id_dict[u'30日內總訪客數']], [BandCombineOperator.EXCEPT])),
+             target_band=BandCombine([band_id_dict[u'90日內總訪客數'], band_id_dict[u'30日內總訪客數']], [BandCombineOperator.EXCEPT]),
+             shared=True),
         # 2.潛力消費名單
         Band(category=cat_dict[u'2.潛力消費名單'], name=u'昨日無消費', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'昨日訪客數'], band_id_dict[u'昨日曾消費']], [BandCombineOperator.EXCEPT])),
+             target_band=BandCombine([band_id_dict[u'昨日訪客數'], band_id_dict[u'昨日曾消費']], [BandCombineOperator.EXCEPT]),
+             shared=True),
         Band(category=cat_dict[u'2.潛力消費名單'], name=u'近7日無消費', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'7日內總訪客數'], band_id_dict[u'7日內曾消費客戶']], [BandCombineOperator.EXCEPT])),
+             target_band=BandCombine([band_id_dict[u'7日內總訪客數'], band_id_dict[u'7日內曾消費客戶']], [BandCombineOperator.EXCEPT]),
+             shared=True),
         Band(category=cat_dict[u'2.潛力消費名單'], name=u'近30日無消費', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'30日內總訪客數'], band_id_dict[u'30日內曾消費客戶']], [BandCombineOperator.EXCEPT])),
+             target_band=BandCombine([band_id_dict[u'30日內總訪客數'], band_id_dict[u'30日內曾消費客戶']], [BandCombineOperator.EXCEPT]),
+             shared=True),
         Band(category=cat_dict[u'2.潛力消費名單'], name=u'近90日無消費', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'90日內總訪客數'], band_id_dict[u'90日內曾消費客戶']], [BandCombineOperator.EXCEPT])),
+             target_band=BandCombine([band_id_dict[u'90日內總訪客數'], band_id_dict[u'90日內曾消費客戶']], [BandCombineOperator.EXCEPT]),
+             shared=True),
         # 3.顧客價值分群
         Band(category=cat_dict[u'3.顧客價值分群'], name=u'優質客群', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'訂單數大於等於平均'], band_id_dict[u'消費金額大於等於平均']], [BandCombineOperator.INTERSECT])),
+             target_band=BandCombine([band_id_dict[u'訂單數大於等於平均'], band_id_dict[u'消費金額大於等於平均']], [BandCombineOperator.INTERSECT]),
+             shared=True),
         Band(category=cat_dict[u'3.顧客價值分群'], name=u'提升客單價客群', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'訂單數大於等於平均'], band_id_dict[u'消費金額小於平均']], [BandCombineOperator.INTERSECT])),
+             target_band=BandCombine([band_id_dict[u'訂單數大於等於平均'], band_id_dict[u'消費金額小於平均']], [BandCombineOperator.INTERSECT]),
+             shared=True),
         Band(category=cat_dict[u'3.顧客價值分群'], name=u'提升消費頻次客群', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'訂單數小於平均'], band_id_dict[u'消費金額大於等於平均']], [BandCombineOperator.INTERSECT])),
+             target_band=BandCombine([band_id_dict[u'訂單數小於平均'], band_id_dict[u'消費金額大於等於平均']], [BandCombineOperator.INTERSECT]),
+             shared=True),
         Band(category=cat_dict[u'3.顧客價值分群'], name=u'即將流失客群', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'訂單數小於平均'], band_id_dict[u'消費金額小於平均']], [BandCombineOperator.INTERSECT])),
+             target_band=BandCombine([band_id_dict[u'訂單數小於平均'], band_id_dict[u'消費金額小於平均']], [BandCombineOperator.INTERSECT]),
+             shared=True),
         # 4.核心關注客群
         Band(category=cat_dict[u'4.核心關注客群'], name=u'近期關注客群', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'最近30天造訪3次以上'], band_id_dict[u'90日內曾消費客戶']], [BandCombineOperator.INTERSECT])),
+             target_band=BandCombine([band_id_dict[u'最近30天造訪3次以上'], band_id_dict[u'90日內曾消費客戶']], [BandCombineOperator.INTERSECT]),
+             shared=True),
         Band(category=cat_dict[u'4.核心關注客群'], name=u'重要挽留客群', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'消費力前20%'], band_id_dict[u'最近30天造訪3次以上']], [BandCombineOperator.EXCEPT])),
+             target_band=BandCombine([band_id_dict[u'消費力前20%'], band_id_dict[u'最近30天造訪3次以上']], [BandCombineOperator.EXCEPT]),
+             shared=True),
         Band(category=cat_dict[u'4.核心關注客群'], name=u'重點發展客群', description='', type=BandType.COMBINE,
-             target_band=BandCombine([band_id_dict[u'消費力前20%'], band_id_dict[u'最近90天造訪3次以上']], [BandCombineOperator.INTERSECT])),
+             target_band=BandCombine([band_id_dict[u'消費力前20%'], band_id_dict[u'最近90天造訪3次以上']], [BandCombineOperator.INTERSECT]),
+             shared=True),
     ]
     for band in combine_bands:
         exist_band = filter(lambda x: x['categoryId'] == band['categoryId'] and x['name'] == band['name'], bands)
@@ -320,6 +353,7 @@ def add_new_bands(ei3, group, user, data_source):
             logger.info('Band (%s) already exist. No need to add new.' % band['name'])
         else:
             logger.info('Adding band (%s)...' % band['name'])
+            band['isDefault'] = True
             ei3.add_band(band)
             logger.info('Done.')
 
@@ -333,7 +367,7 @@ def func_new_customer(emc2, ei3):
             if new_group is not None:
                 new_user = add_new_user(emc2, new_group)
                 new_ds = add_new_data_source(emc2, new_group)
-                add_new_bands(ei3, new_group, new_user, new_ds)
+                add_new_bands(ei3, new_group, new_ds)
 
             go_next = promise_prompt('Do you want to create another one (Y/n) [n]? ', 'n')
             if go_next.lower() != 'y':
@@ -359,7 +393,12 @@ def get_exist_group(emc2):
 
 
 def remove_bands(emc2, ei3, suspend_group):
+
+    group_def_user = User('{0}_DefaultOperator'.format(suspend_group['name']), 'Default')
+
     users = emc2.get_users(suspend_group)
+    users.append(group_def_user)
+
     for user in users:
         logger.info('Removing bands of user (%s)...' % user['name'])
 

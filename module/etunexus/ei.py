@@ -114,7 +114,10 @@ class BandCategory(dict):
         })
 
     def to_simple(self):
-        return {'name': self['name']}
+        ret = {'name': self['name']}
+        if self.get('isDefault'):
+            ret['isDefault'] = self.get('isDefault')
+        return ret
 
     @classmethod
     def from_dict(cls, dict_obj):
@@ -189,13 +192,14 @@ class Band(dict):
         id (int): The auto id.
         amount (int): Amount of users in the band.
         updateTime (long): The band update time in Epoch (milliseconds).
+        owner (str): The owner (user_id) of the band.
     """
 
     def __init__(self, category, name, description,
                  type, target_gene=None, target_band=None,
                  need_refresh=True, snapshot_info=None,
                  shared=False,
-                 id=None, amount=None, update_time=None):
+                 id=None, amount=None, update_time=None, owner=None):
         super(Band, self).__init__({
             'categoryId': category['id'] if isinstance(category, BandCategory) else int(category),
             'name': name,
@@ -212,7 +216,8 @@ class Band(dict):
 
             'id': id,
             'amount': amount,
-            'updateTime': update_time
+            'updateTime': update_time,
+            'owner': owner
         })
 
     @classmethod
@@ -222,7 +227,8 @@ class Band(dict):
                    dict_obj['type'], dict_obj.get('targetGene'), dict_obj.get('targetBand'),
                    dict_obj['needRefresh'], dict_obj.get('snapshotInfo'),
                    dict_obj.get('shared'),
-                   dict_obj.get('id'), dict_obj.get('amount'), dict_obj.get('updateTime'))
+                   dict_obj.get('id'), dict_obj.get('amount'), dict_obj.get('updateTime'),
+                   dict_obj.get('owner'))
 
     @classmethod
     def from_dict_with_ext_cat(cls, dict_obj, category):
@@ -232,7 +238,8 @@ class Band(dict):
                    dict_obj['type'], dict_obj.get('targetGene'), dict_obj.get('targetBand'),
                    dict_obj['needRefresh'], dict_obj.get('snapshotInfo'),
                    dict_obj.get('shared'),
-                   dict_obj.get('id'), dict_obj.get('amount'), dict_obj.get('updateTime'))
+                   dict_obj.get('id'), dict_obj.get('amount'), dict_obj.get('updateTime'),
+                   dict_obj.get('owner'))
 
 
 class SnapshotInfo(dict):
@@ -477,12 +484,12 @@ class EI3(BaseApp):
         Though the gene setting is global, different group may be authorized with different set.
 
         Arguments:
-            group (obj or int): The Group instance or a group id to get.
+            group (obj or int): The emc.Group instance, or EIGroup instance, or a group id to get genes.
         Return:
             A list of GeneCategory instances.
         """
         assert group
-        group_id = group['id'] if isinstance(group, Group) else int(group)
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, EIGroup) else int(group)
         res = self.request_get('/genecategory?groupId={0}'.format(group_id))
         return [GeneCategory.from_dict(x) for x in res['data']]
 
@@ -548,6 +555,23 @@ class EI3(BaseApp):
         res_id = res['data'][0]['id'] if isinstance(res['data'], list) else res['data']['id']
         assert res_id == band_category_id
         return res_id
+
+    def get_shared_band_categories(self, group=None):
+        """ Get shared band categories and detail bands in the group.
+
+        Arguments:
+            group (obj or int): The emc.Group instance, or EIGroup instance, or a group id to get shared bands. If
+                                it is omitted (=None), current user gorup is used. 
+        Return:
+            A list of BandCategory instances.
+        """
+        api = '/sharingbandcategory'
+        if group is not None:
+            group_id = group['id'] if isinstance(group, Group) or isinstance(group, EIGroup) else int(group)
+            api = '/sharingbandcategory?groupId={0}'.format(group_id)
+
+        res = self.request_get(api)
+        return [BandCategory.from_dict(x) for x in res['data']]
 
     # Band
     def add_band(self, band, file_path=None):
@@ -665,7 +689,7 @@ class EI3(BaseApp):
         with Etu members for the detail.
 
         Arguments:
-            group (obj or int): The Group or EIGroup instance or a group id to upload fixed gene schema.
+            group (obj or int): The emc.Group or EIGroup instance or a group id to upload fixed gene schema.
             file_path (str): The schema file.
         Return:
             A FixedGeneCategory instance as the schema defined.
@@ -684,7 +708,7 @@ class EI3(BaseApp):
         consult with Etu members for the detail.
 
         Arguments:
-            group (obj or int): The Group or EIGroup instance or a group id to upload fixed gene schema.
+            group (obj or int): The emc.Group or EIGroup instance or a group id to upload fixed gene schema.
             file_path (str): The data file.
         Return:
             A success message.
@@ -718,7 +742,7 @@ class EI3(BaseApp):
         """ Get EI statistics.
 
         Arguments:
-            group (obj or int): A Group instance or group id.
+            group (obj or int): The emc.Group instance, or EIGroup instance, or a group id to get statistics.
             items (list): Refer to EIStatisticsItem for valid values, and put the (multiple) items into a list.
                 e.g. [EIStatisticsItem.DOWNLOAD_UID_LIST, EIStatisticsItem.ADD_BAND]
             start_date (date or str): Start date of the statistics to query. It could be a datetime.date instance, or a
@@ -733,7 +757,7 @@ class EI3(BaseApp):
             The result is sorted by the date.
         """
         assert group and items and isinstance(items, list) and start_date and end_date
-        group_id = group['id'] if isinstance(group, Group) else int(group)
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, EIGroup) else int(group)
         start_date_str = '%04d-%02d-%02d' % (start_date.year, start_date.month, start_date.day) \
             if isinstance(start_date, date) else str(start_date)
         end_date_str = '%04d-%02d-%02d' % (end_date.year, end_date.month, end_date.day) \
@@ -782,7 +806,7 @@ class EI3(BaseApp):
         with Etu members for the detail.
 
         Arguments:
-            group (obj or int): The Group instance, or EIGroup instance, or a group id to add the data.
+            group (obj or int): The emc.Group instance, or EIGroup instance, or a group id to add the data.
             file_path (str): The data file.
         Return:
             The total item info (pid count) uploaded.
@@ -797,8 +821,8 @@ class EI3(BaseApp):
         """ Make "su" login (admin/operator only).
 
         Arguments:
-            group (obj or int): The Group instance, or EIGroup instance, or a group name of the simulated user.
-            user (obj or int): The User instance, or EIUser instance, or a user name of the simualted user.
+            group (obj or int): The Group instance, or EIGroup instance, or a group name of the user to simulate.
+            user (obj or int): The User instance, or EIUser instance, or a user name of the user to simulate.
         Return:
             A success message.
         """
