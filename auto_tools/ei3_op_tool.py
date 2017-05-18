@@ -52,6 +52,7 @@ class AuthInfo():
         self.cas_host = DEF_CAS_HOST
         self.emc2_host = DEF_EMC2_HOST
         self.ei3_host = DEF_EI3_HOST
+        self.security_check = SECURITY_CHECK
         self.group = ''
         self.user = ''
         self.password = ''
@@ -63,6 +64,11 @@ class AuthInfo():
             self.cas_host = promise_prompt('Please input single sign-on host [%s]: ' % DEF_CAS_HOST, DEF_CAS_HOST)
             self.emc2_host = promise_prompt('Please input EMC2 host [%s]: ' % DEF_EMC2_HOST, DEF_EMC2_HOST)
             self.ei3_host = promise_prompt('Please input EI3 host [%s]: ' % DEF_EI3_HOST, DEF_EI3_HOST)
+
+            if self.cas_host != DEF_CAS_HOST:
+                skip_security_check = promise_prompt('Skip security check (Y/n) [n]?', 'n')
+                if skip_security_check.lower() == 'y':
+                    self.security_check = False
 
             logger.info('\n[Input login info]')
             self.group = promise_prompt('Group: ')
@@ -79,6 +85,10 @@ class AuthInfo():
     @property
     def ei3_host(self):
         return self.ei3_host
+
+    @property
+    def security_check(self):
+        return self.security_check
 
     @property
     def group(self):
@@ -595,7 +605,7 @@ def main():
         return 1
 
     logger.info('Validating login info...')
-    cas = CAS(auth_info.group, auth_info.user, auth_info.password, auth_info.cas_host, secure=SECURITY_CHECK)
+    cas = CAS(auth_info.group, auth_info.user, auth_info.password, auth_info.cas_host, secure=auth_info.security_check)
     emc2 = EMC2(cas, auth_info.emc2_host)
     emc2.logger.setLevel(LOGGING_LEVEL)
     ei3 = EI3(cas, auth_info.ei3_host)
