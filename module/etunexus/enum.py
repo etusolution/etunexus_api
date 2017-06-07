@@ -135,6 +135,23 @@ class EIStatisticsItem(object):
     BAND_COUNT = 'bandCount'
 
 
+class EIPopulationTimelineFilterOP(object):
+    """ Enumeration of EI population timeline filter op """
+    LT = 'LT'
+    LE = 'LE'
+    EQ = 'EQ'
+    GE = 'GE'
+    GT = 'GT'
+    NE = 'NE'
+
+
+class EIPopulationTimelineFilterCompType(object):
+    """ Enumeration of EI population timeline filter comparator type """
+    NUMBER = 'NUMBER'
+    STRING = 'STRING'
+    SUBSTRING = 'SUBSTRING'
+
+
 class LayoutTitleAlignment(object):
     """ Enumeration of ER logic layout title alignment """
     CENTER = 'center'

@@ -341,6 +341,35 @@ class PopulationSummary(dict):
         return cls(dict_obj['key'], dict_obj['amount'])
 
 
+class PopulationTimeline(dict):
+    """ Structure for poluation timeline data.
+    
+    Fields:
+        name (str): The gene id.
+        group (str): The group name.
+        data_source_id (int): The data source id.
+        start_time (int): The Epoch timestamp of data query start time.
+        end_time (int): The Epoch timestamp of data query end time.
+        data (obj): List of (date, count) detail data.
+    """
+
+    def __init__(self, name, group, ds_id, start_time, end_time, data):
+        super(PopulationTimeline, self).__init__({
+            'name': name,
+            'group': group,
+            'data_source_id': ds_id,
+            'start_time': start_time,
+            'end_time': end_time,
+            'data': [(date.fromtimestamp(x[0]/1000), x[1]) for x in data]
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj
+        return cls(dict_obj['name'], dict_obj['group'], dict_obj['cid'], dict_obj['startTime'], dict_obj['endTime'],
+                   dict_obj['data'])
+
+
 class EIGroup(dict):
     """ Structure for Etu Insight group.
 
@@ -735,7 +764,37 @@ class EI3(BaseApp):
         res = self.request_get('/population/summary?geneId={0}&cId={1}'.format(gene_id, data_source_id))
         return [PopulationSummary.from_dict(x) for x in res['data']]
 
-    # TODO: Add support for population timeline API
+    def get_population_timeline(self, genes, data_source, start_date, end_date, filter_op,
+                                filter_comp=EIPopulationTimelineFilterCompType.STRING + ':*'):
+        """ Get population timeline data.
+        
+        Arguments:
+            genes (obj): A list of Gene instances or gene ids to get timeline data.
+            data_source (obj or int): The emc.DataSource instance or a data source id.
+            start_date (date or str): Start date of the data to query. It could be a datetime.date instance, or a
+                string in 'yyyy-mm-dd' format.
+            end_date (date or str): End date of the data to query. It could be a datetime.date instance, or a
+                string in 'yyyy-mm-dd' format.
+            filter_op (str): The filter operator, refer to "EIPopulationTimelineFilterOP" enum for valid values.
+            filter_comp (str): The filter comparator in format "TYPE:VALUE". For valid "TYPE", refer to
+                "EIPopulationTimelineFilterCompType" enum.
+        Return:
+            A list of PopulationTimeline instances.
+        """
+        assert genes and isinstance(genes, list) and data_source
+        assert start_date and end_date
+        assert filter_op and filter_comp
+        gene_ids = ','.join([gene['id'] if isinstance(gene, Gene) else str(gene) for gene in genes])
+        data_source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
+        start_date_str = '%04d-%02d-%02d' % (start_date.year, start_date.month, start_date.day) \
+            if isinstance(start_date, date) else str(start_date)
+        end_date_str = '%04d-%02d-%02d' % (end_date.year, end_date.month, end_date.day) \
+            if isinstance(end_date, date) else str(end_date)
+
+        res = self.request_get('/timeline/population/{0}/{1}?startTime={2}&endTime={3}&filterOperator={4}&filterComparator={5}'.format(
+            gene_ids, data_source_id, start_date_str, end_date_str, filter_op, filter_comp
+        ))
+        return [PopulationTimeline.from_dict(x) for x in res['data']]
 
     # Statistics
     def get_statistics(self, group, items, start_date, end_date=date.today()):
