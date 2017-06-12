@@ -848,9 +848,10 @@ class EI3(BaseApp):
         is no authentication check.
 
         Arguments:
-            user (obj or int): The
+            user (obj or int): The owner of the bands.
             uid (str): The user/customer id.
         Return:
+            An UidBandList instance.
         """
         assert user and uid and isinstance(uid, str)
         user_id = user['id'] if isinstance(user, User) or isinstance(user, EIUser) else int(user)
@@ -874,6 +875,26 @@ class EI3(BaseApp):
         group_id = group['id'] if isinstance(group, Group) or isinstance(group, EIGroup) else int(group)
         res = self.request_upload('/item', data={'groupId': group_id}, file=file_path)
         return res['data']['pidNumber']
+
+    # EC Application - Summary
+    def get_summary(self, summary_id, data_source, band):
+        """ Get the summary data of EC application.
+
+        Arguments:
+            summary_id (str): The summary id, e.g. Summary_Revisit_7, Summary_Revisit_30, etc.
+            data_source (obj or int): A emc.DataSource instance or a data source id.
+            band (obj or int): A Band instance of a band id.
+        Return:
+
+        """
+        assert summary_id and data_source and band
+        upper_bound = 1
+        lower_bound = 1
+        data_source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
+        band_id = band['id'] if isinstance(band, Band) else int(band)
+        res = self.request_get('/summary/{0}?cId={1}&bandId={1}&upperBound={2}&lowerBound={3}'.format(
+            summary_id, data_source_id, band_id, upper_bound, lower_bound))
+        return res['data']
 
     # Un-documented APIs for admin/operator
     def do_su_login(self, group, user):
@@ -900,3 +921,16 @@ class EI3(BaseApp):
         """
         res = self.request_del('/suauth')
         return res['data']
+
+    def get_default_bandcategories(self, data_source):
+        """ Get default band category and bands.
+        
+        Arguments:
+            data_source (obj or int): The emc.DatraSource instance or a data source id.
+        Return:
+            A list of BandCategory instances.
+        """
+        assert data_source
+        data_source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
+        res = self.request_get('/defaultbandcategory?cId={0}'.format(data_source_id))
+        return [BandCategory.from_dict(x) for x in res['data']]
