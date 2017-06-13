@@ -203,7 +203,7 @@ def main():
                     logger.info('...Update target gene operand of band %s to %s' % (band_target['name'], target_value))
                     band_target['targetGene']['operand'] = target_value
                     ei3.update_band(band_target)
-            else
+            else:
                 logger.warn('...No valid value to update. Skip it.')
 
         except (NotFoundError, NotAuthorizedError) as e:
