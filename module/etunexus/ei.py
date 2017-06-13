@@ -159,8 +159,8 @@ class BandCombine(dict):
     """
 
     def __init__(self, bands, operators):
-        assert bands and  isinstance(bands, list)
-        assert operators and isinstance(operators, list)
+        assert bands and isinstance(bands, list)
+        assert isinstance(operators, list)
         super(BandCombine, self).__init__({
             'bandIds': [x['id'] if isinstance(x, Band) else x for x in bands],
             'operators': operators
@@ -892,7 +892,7 @@ class EI3(BaseApp):
         lower_bound = 1
         data_source_id = data_source['id'] if isinstance(data_source, DataSource) else int(data_source)
         band_id = band['id'] if isinstance(band, Band) else int(band)
-        res = self.request_get('/summary/{0}?cId={1}&bandId={1}&upperBound={2}&lowerBound={3}'.format(
+        res = self.request_get('/summary/{0}?cId={1}&bandId={2}&upperBound={3}&lowerBound={4}'.format(
             summary_id, data_source_id, band_id, upper_bound, lower_bound))
         return res['data']
 
