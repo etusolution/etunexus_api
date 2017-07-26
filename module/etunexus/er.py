@@ -73,7 +73,7 @@ class AlgInstance(dict):
         weight (int): The weight of the algorithm in the linear combination to the recommendation logic result.
         setting (obj): The setting depend on the concrete algorithm implementation.
 
-        executeTime (long): Last execution/processng time in Epoch (milliseconds).
+        executeTime (long): Last execution/processing time in Epoch (milliseconds).
         executeState (str): Last execution status, refer to "LogicExecuteState" enum for valid values.
         successTime (long): Last success execution time in Epoch (milliseconds).
     """
@@ -442,7 +442,7 @@ class Logic(dict):
         id (int): The auto id.
         createTime (long): Create time in Epoch (milliseconds).
         updateTime (long): Update time in Epoch (milliseconds).
-        executeTime (long): Last execution/processng time in Epoch (milliseconds).
+        executeTime (long): Last execution/processing time in Epoch (milliseconds).
         executeState (str): Last execution status, refer to "LogicExecuteState" enum for valid values.
         successTime (long): Last success execution time in Epoch (milliseconds).
     """
