@@ -59,6 +59,13 @@ class LogicAlgorithmId(object):
     LDA = 'LDA'
 
 
+class LogicExecuteState(object):
+    """ Enumeration of recommendation logic execution state """
+    SUCCESS = 'SUCCESS'
+    FAILED = 'FAILED'
+    RUNNING = 'RUNNING'
+
+
 class EventAction(object):
     """ Enumeration of action samples used in algorithms """
     VIEW = 'view'

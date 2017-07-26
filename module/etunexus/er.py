@@ -72,19 +72,34 @@ class AlgInstance(dict):
         for samples but not limited.
         weight (int): The weight of the algorithm in the linear combination to the recommendation logic result.
         setting (obj): The setting depend on the concrete algorithm implementation.
+
+        executeTime (long): Last execution/processng time in Epoch (milliseconds).
+        executeState (str): Last execution status, refer to "LogicExecuteState" enum for valid values.
+        successTime (long): Last success execution time in Epoch (milliseconds).
     """
-    def __init__(self, alg_id, weight, setting):
-        assert alg_id and weight and setting and isinstance(setting, dict)
+    def __init__(self, alg_id, setting):
+        assert alg_id and setting and isinstance(setting, dict)
         super(AlgInstance, self).__init__({
             'algId': alg_id,
-            'weight': weight,
             'setting': setting
+        })
+
+    def __init_general(self, dict_obj):
+        self.update({
+            'weight': dict_obj['weight'],
+
+            'executeTime': dict_obj.get('executeTime'),
+            'executeState': dict_obj.get('executeState'),
+            'successTime': dict_obj.get('successTime')
         })
 
     @classmethod
     def from_dict(cls, dict_obj):
         assert dict_obj
-        return cls._create_alg_instance(dict_obj['algId'], dict_obj)
+        obj = cls._create_alg_instance(dict_obj['algId'], dict_obj)
+        if obj is not None:
+            obj.__init_general(dict_obj)
+        return obj
 
     @classmethod
     def _create_alg_instance(cls, alg_id, dict_obj):
@@ -102,15 +117,14 @@ class Alg_UNKNOWN(AlgInstance):
     Fields:
         (As 'setting' in AlgInstance)
     """
-    def __init__(self, weight, setting):
-        assert weight and setting and isinstance(setting, dict)
-        super(Alg_UNKNOWN, self).__init__(LogicAlgorithmId.UNKNOWN, weight, setting)
+    def __init__(self, setting):
+        assert setting and isinstance(setting, dict)
+        super(Alg_UNKNOWN, self).__init__(LogicAlgorithmId.UNKNOWN, setting)
 
     @classmethod
     def from_dict(cls, dict_obj):
         assert dict_obj and dict_obj['setting']
-        setting = dict_obj['setting']
-        return cls(dict_obj['weight'], setting)
+        return cls(dict_obj['setting'])
 
 
 class Alg_USER_BASED_CF(AlgInstance):
@@ -122,8 +136,10 @@ class Alg_USER_BASED_CF(AlgInstance):
         DATASOURCE (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
         TIMERANGE (int): The data time range to calculate.
         action (list): A list of event actions to calculate, refer to "EventAction" enum for samples but not limited.
+        als_iteration (int): ALS iterations.
+        als_rank (int): ALS training features.
     """
-    def __init__(self, weight, data_source, time_range, actions):
+    def __init__(self, data_source, time_range, actions, als_iteration=10, als_rank=10):
         assert data_source and isinstance(data_source, dict)
         assert time_range
         assert actions and isinstance(actions, list)
@@ -131,15 +147,18 @@ class Alg_USER_BASED_CF(AlgInstance):
             'id': LogicAlgorithmId.USER_BASED_CF,
             'DATASOURCE': {'id': data_source['id'], 'name': data_source['name']},
             'TIMERANGE': time_range,
-            'action': actions
+            'action': actions,
+            'als_iteration': als_iteration,
+            'als_rank': als_rank
         }
-        super(Alg_USER_BASED_CF, self).__init__(LogicAlgorithmId.USER_BASED_CF, weight, setting)
+        super(Alg_USER_BASED_CF, self).__init__(LogicAlgorithmId.USER_BASED_CF, setting)
 
     @classmethod
     def from_dict(cls, dict_obj):
         assert dict_obj and dict_obj['setting']
         setting = dict_obj['setting']
-        return cls(dict_obj['weight'], setting['DATASOURCE'], setting['TIMERANGE'], setting['action'])
+        return cls(setting['DATASOURCE'], setting['TIMERANGE'], setting['action'],
+                   setting.get('als_iteration'), setting.get('als_rank'))
 
 
 class Alg_ITEM_BASED_CF(AlgInstance):
@@ -151,8 +170,10 @@ class Alg_ITEM_BASED_CF(AlgInstance):
         DATASOURCE (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
         TIMERANGE (int): The data time range to calculate.
         action (list): A list of event actions to calculate, refer to "EventAction" enum for samples but not limited.
+        als_iteration (int): ALS iterations.
+        als_rank (int): ALS training features.
     """
-    def __init__(self, weight, data_source, time_range, actions):
+    def __init__(self, data_source, time_range, actions, als_iteration=10, als_rank=10):
         assert data_source and isinstance(data_source, dict)
         assert time_range
         assert actions and isinstance(actions, list)
@@ -160,15 +181,18 @@ class Alg_ITEM_BASED_CF(AlgInstance):
             'id': LogicAlgorithmId.ITEM_BASED_CF,
             'DATASOURCE': {'id': data_source['id'], 'name': data_source['name']},
             'TIMERANGE': time_range,
-            'action': actions
+            'action': actions,
+            'als_iteration': als_iteration,
+            'als_rank': als_rank
         }
-        super(Alg_ITEM_BASED_CF, self).__init__(LogicAlgorithmId.ITEM_BASED_CF, weight, setting)
+        super(Alg_ITEM_BASED_CF, self).__init__(LogicAlgorithmId.ITEM_BASED_CF, setting)
 
     @classmethod
     def from_dict(cls, dict_obj):
         assert dict_obj and dict_obj['setting']
         setting = dict_obj['setting']
-        return cls(dict_obj['weight'], setting['DATASOURCE'], setting['TIMERANGE'], setting['action'])
+        return cls(setting['DATASOURCE'], setting['TIMERANGE'], setting['action'],
+                   setting.get('als_iteration'), setting.get('als_rank'))
 
 
 class Alg_RANKING(AlgInstance):
@@ -184,7 +208,7 @@ class Alg_RANKING(AlgInstance):
         addNonCategoryRec (bool): Generate category-independent recommendation list or not.
         delimiter (str): The delimiter in the category string for multiple levels categories.
     """
-    def __init__(self, weight, data_source, time_range, actions, gen_non_category_rec=True, delimiter=None):
+    def __init__(self, data_source, time_range, actions, gen_non_category_rec=True, delimiter=None):
         assert data_source and isinstance(data_source, dict)
         assert time_range
         assert actions and isinstance(actions, list)
@@ -199,13 +223,13 @@ class Alg_RANKING(AlgInstance):
             'addNonCategoryRec': str(bool(gen_non_category_rec)).lower(),
             'delimiter': delimiter
         }
-        super(Alg_RANKING, self).__init__(LogicAlgorithmId.RANKING, weight, setting)
+        super(Alg_RANKING, self).__init__(LogicAlgorithmId.RANKING, setting)
 
     @classmethod
     def from_dict(cls, dict_obj):
         assert dict_obj and dict_obj['setting']
         setting = dict_obj['setting']
-        return cls(dict_obj['weight'], setting['DATASOURCE'], setting['TIMERANGE'], setting['actionList'],
+        return cls(setting['DATASOURCE'], setting['TIMERANGE'], setting['actionList'],
                    setting.get('addNonCategoryRec'), setting.get('delimiter'))
 
 
@@ -224,7 +248,7 @@ class Alg_RANKING_ITEMINFO(AlgInstance):
         addNonCategoryRec (bool): Generate category-independent recommendation list or not.
         delimiter (str): The delimiter in the category string for multiple levels categories.
     """
-    def __init__(self, weight, data_source, time_range, actions, item_data_source,
+    def __init__(self, data_source, time_range, actions, item_data_source,
                  gen_non_category_rec=True, delimiter=None):
         assert data_source and isinstance(data_source, dict)
         assert time_range
@@ -242,13 +266,13 @@ class Alg_RANKING_ITEMINFO(AlgInstance):
             'addNonCategoryRec': str(bool(gen_non_category_rec)).lower(),
             'delimiter': delimiter
         }
-        super(Alg_RANKING_ITEMINFO, self).__init__(LogicAlgorithmId.RANKING_ITEMINFO, weight, setting)
+        super(Alg_RANKING_ITEMINFO, self).__init__(LogicAlgorithmId.RANKING_ITEMINFO, setting)
 
     @classmethod
     def from_dict(cls, dict_obj):
         assert dict_obj and dict_obj['setting']
         setting = dict_obj['setting']
-        return cls(dict_obj['weight'], setting['DATASOURCE'], setting['TIMERANGE'], setting['actionList'],
+        return cls(setting['DATASOURCE'], setting['TIMERANGE'], setting['actionList'],
                    setting['datasource_Iteminfo'],
                    setting.get('addNonCategoryRec'), setting.get('delimiter'))
 
@@ -264,7 +288,7 @@ class Alg_SEARCH2CLICK(AlgInstance):
         TIME_DECAYED (int): The time decay factor.
         ACTION (str): The event action to calculate after the search event.
     """
-    def __init__(self, weight, data_source, time_range, time_decay_factor, action):
+    def __init__(self, data_source, time_range, time_decay_factor, action):
         assert data_source and isinstance(data_source, dict)
         assert time_range
         assert time_decay_factor
@@ -276,14 +300,13 @@ class Alg_SEARCH2CLICK(AlgInstance):
             'TIME_DECAYED': time_decay_factor,
             'ACTION': action
         }
-        super(Alg_SEARCH2CLICK, self).__init__(LogicAlgorithmId.SEARCH2CLICK, weight, setting)
+        super(Alg_SEARCH2CLICK, self).__init__(LogicAlgorithmId.SEARCH2CLICK, setting)
 
     @classmethod
     def from_dict(cls, dict_obj):
         assert dict_obj and dict_obj['setting']
         setting = dict_obj['setting']
-        return cls(dict_obj['weight'], setting['DATASOURCE'], setting['TIMERANGE'], setting['TIME_DECAYED'],
-                   setting['ACTION'])
+        return cls(setting['DATASOURCE'], setting['TIMERANGE'], setting['TIME_DECAYED'], setting['ACTION'])
 
 
 class Alg_Info_Integrity(AlgInstance):
@@ -297,7 +320,7 @@ class Alg_Info_Integrity(AlgInstance):
 
     Notice: "attritubeList" is the typo of "attributeList".
     """
-    def __init__(self, weight, data_source, attributes):
+    def __init__(self, data_source, attributes):
         assert data_source and isinstance(data_source, dict)
         assert attributes and isinstance(attributes, list)
         setting = {
@@ -305,13 +328,13 @@ class Alg_Info_Integrity(AlgInstance):
             'dataSource': {'id': data_source['id'], 'name': data_source['name']},
             'attritubeList': attributes
         }
-        super(Alg_Info_Integrity, self).__init__(LogicAlgorithmId.INFO_INTEGRITY, weight, setting)
+        super(Alg_Info_Integrity, self).__init__(LogicAlgorithmId.INFO_INTEGRITY, setting)
 
     @classmethod
     def from_dict(cls, dict_obj):
         assert dict_obj and dict_obj['setting']
         setting = dict_obj['setting']
-        return cls(dict_obj['weight'], setting['dataSource'], setting['attritubeList'])
+        return cls(setting['dataSource'], setting['attritubeList'])
 
 
 class Alg_ALS(AlgInstance):
@@ -324,7 +347,7 @@ class Alg_ALS(AlgInstance):
         timeRange (int): The data time range to calculate.
         LAMBDA (float): The lambda value for ALS algorithm.
     """
-    def __init__(self, weight, data_source, time_range, lambda_val=0.1):
+    def __init__(self, data_source, time_range, lambda_val=0.1):
         assert data_source and isinstance(data_source, dict)
         assert time_range
         assert lambda_val
@@ -334,13 +357,13 @@ class Alg_ALS(AlgInstance):
             'timeRange': time_range,
             'LAMBDA': lambda_val
         }
-        super(Alg_ALS, self).__init__(LogicAlgorithmId.ALS, weight, setting)
+        super(Alg_ALS, self).__init__(LogicAlgorithmId.ALS, setting)
 
     @classmethod
     def from_dict(cls, dict_obj):
         assert dict_obj and dict_obj['setting']
         setting = dict_obj['setting']
-        return cls(dict_obj['weight'], setting['dataSource'], setting['timeRange'], setting['LAMBDA'])
+        return cls(setting['dataSource'], setting['timeRange'], setting['LAMBDA'])
 
 
 class Alg_LDA(AlgInstance):
@@ -351,19 +374,19 @@ class Alg_LDA(AlgInstance):
         id: Fixed "LDA"
         DATASOURCE (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
     """
-    def __init__(self, weight, data_source):
+    def __init__(self, data_source):
         assert data_source and isinstance(data_source, dict)
         setting = {
             'id': LogicAlgorithmId.LDA,
             'DATASOURCE': {'id': data_source['id'], 'name': data_source['name']}
         }
-        super(Alg_LDA, self).__init__(LogicAlgorithmId.LDA, weight, setting)
+        super(Alg_LDA, self).__init__(LogicAlgorithmId.LDA, setting)
 
     @classmethod
     def from_dict(cls, dict_obj):
         assert dict_obj and dict_obj['setting']
         setting = dict_obj['setting']
-        return cls(dict_obj['weight'], setting['DATASOURCE'])
+        return cls(setting['DATASOURCE'])
 
 
 class UserFilter(dict):
@@ -407,6 +430,7 @@ class Logic(dict):
         userFilter (object): User filter setting.
         useLocation (bool): Use location or not.
         delegateLogicName (str): The logic(s) for recommendation complementary.
+        filteringLogicIds (list): ID list of the filtering logic(s).
         enableUpdating (bool): Enable core engine process or not.
 
         ## Item Filtering (only for altType==ITEM_BASE)
@@ -418,19 +442,23 @@ class Logic(dict):
         id (int): The auto id.
         createTime (long): Create time in Epoch (milliseconds).
         updateTime (long): Update time in Epoch (milliseconds).
+        executeTime (long): Last execution/processng time in Epoch (milliseconds).
+        executeState (str): Last execution status, refer to "LogicExecuteState" enum for valid values.
+        successTime (long): Last success execution time in Epoch (milliseconds).
     """
     def __init__(self, name, display_name, active, rec_count,
                  alg_type, alg_instances,
                  user_filter=None,
                  use_location=False, enable_last_viewed_item=False,
-                 complementary_logics=None, enable_updating=True,
+                 complementary_logics=None, filtering_logics=None, enable_updating=True,
                  item_filter_src=None, enable_same_category=False, avl_item_filter_mode=LogicAvlItemFilterMode.DISABLED,
-                 id=None, create_time=None, update_time=None):
+                 id=None, create_time=None, update_time=None, execute_time=None, execute_state=None, success_time=None):
         assert name and display_name and rec_count
         assert active is not None and isinstance(active, bool)
         assert alg_type and alg_instances and isinstance(alg_instances, list)
         if user_filter is not None:
-            assert isinstance(user_filter, UserFilter)
+            assert isinstance(user_filter, UserFilter) or isinstance(user_filter, dict)
+            user_filter = user_filter if isinstance(user_filter, UserFilter) else UserFilter.from_dict(user_filter)
         assert isinstance(use_location, bool)
         assert isinstance(enable_last_viewed_item, bool)
         assert isinstance(enable_same_category, bool)
@@ -445,6 +473,7 @@ class Logic(dict):
             'useLocation': use_location,
             'enableLastViewedItem': enable_last_viewed_item,
             'delegateLogicName': complementary_logics,
+            'filteringLogicIds': filtering_logics,
             'enableUpdating': enable_updating,
 
             'itemFilterSrc': item_filter_src,
@@ -453,7 +482,10 @@ class Logic(dict):
 
             'id': id,
             'createTime': create_time,
-            'updateTime': update_time
+            'updateTime': update_time,
+            'executeTime': execute_time,
+            'executeState': execute_state,
+            'successTime': success_time
         })
 
     @classmethod
@@ -462,9 +494,10 @@ class Logic(dict):
                    dict_obj['algType'], dict_obj['algInstances'],
                    dict_obj.get('userFilter'),
                    dict_obj['useLocation'], dict_obj['enableLastViewedItem'],
-                   dict_obj.get('delegateLogicName'), dict_obj['enableUpdating'],
+                   dict_obj.get('delegateLogicName'), dict_obj.get('filteringLogicIds'), dict_obj['enableUpdating'],
                    dict_obj.get('itemFilterSrc'), dict_obj['enableSameCategory'], dict_obj['avlItemFilterMode'],
-                   dict_obj.get('id'), dict_obj.get('createTime'), dict_obj.get('updateTime'))
+                   dict_obj.get('id'), dict_obj.get('createTime'), dict_obj.get('updateTime'),
+                   dict_obj.get('executeTime'), dict_obj.get('executeState'), dict_obj.get('successTime'))
 
 
 class Campaign(dict):
