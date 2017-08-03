@@ -373,7 +373,7 @@ class Alg_ALS(AlgInstance):
 
 
 class Alg_LDA(AlgInstance):
-    """ Structure for LDA context-awared recommendation.
+    """ Structure for LDA context-aware recommendation.
 
     Fields:
         (As 'setting' in AlgInstance)
@@ -393,6 +393,124 @@ class Alg_LDA(AlgInstance):
         assert dict_obj and dict_obj['setting']
         setting = dict_obj['setting']
         return cls(dict_obj['weight'], setting['DATASOURCE'])
+
+
+class AlgTraining(dict):
+    """ Structure for a algorithm training setting and result.
+    
+    Fields:
+        algId (str): The algorithm id, every derived algorithm should have its own id, refer to "LogicAlgorithmId" enum
+        for samples but not limited.
+        setting (obj): The setting depend on the concrete algorithm implementation.
+        state (str): The training execution state, refer to "AlgTrainingState" enum for valid values.
+        result (obj): The result depend on the concrete algorithm implementation.
+        
+        id (int): The auto id.
+        createTime (long): Create time in Epoch (milliseconds).
+        updateTime (long): Update time in Epoch (milliseconds).
+    """
+
+    def __init__(self, alg_id, setting):
+        assert alg_id and setting and isinstance(setting, dict)
+        super(AlgTraining, self).__init__({
+            'algId': alg_id,
+            'setting': setting
+        })
+
+    def __init_result__(self, result):
+        self.update({'result': result})
+
+    def __init_general__(self, dict_obj):
+        self.update({
+            'id': dict_obj['id'],
+            'state': dict_obj['state'],
+            'createTime': dict_obj['createTime'],
+            'updateTime': dict_obj['updateTime']
+        })
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj
+        obj = cls._create_algtraing_instance(dict_obj['algId'], dict_obj)
+        if obj is not None:
+            obj.__init_general__(dict_obj)
+        return obj
+
+    @classmethod
+    def _create_algtraing_instance(cls, alg_id, dict_obj):
+        alg_class_name = 'AlgTraining_{0}'.format(alg_id)
+        try:
+            klass = globals()[alg_class_name]
+        except KeyError, ke:
+            klass = None
+        return klass.from_dict(dict_obj) if klass else AlgTraining_UNKNOWN.from_dict(dict_obj)
+
+
+class AlgTraining_UNKNOWN(AlgTraining):
+    """ Structure of unknown/not-supported algorithm training result.
+
+    Fields:
+        (As 'setting' in AlgTraining)
+        (as 'result' in AlgTraining)
+    """
+    def __init__(self, setting):
+        assert setting and isinstance(setting, dict)
+        super(AlgTraining_UNKNOWN, self).__init__(LogicAlgorithmId.UNKNOWN, setting)
+
+    def __init_result__(self, result):
+        super(AlgTraining_UNKNOWN, self).__init_result__(result)
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj and dict_obj['setting']
+        setting = dict_obj['setting']
+        obj = cls(setting)
+        result = dict_obj.get('result')
+        if result is not None:
+            obj.__init_result(result)
+        return obj
+
+
+class AlgTraining_LDA(AlgTraining):
+    """ Structure for LDA context-aware recommendation model training.
+
+    Fields:
+        (As 'setting' in AlgTraining)
+        DATASOURCE (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
+        TOPICS (int): The number of topics.
+        
+        (As 'result' in AlgTraining)
+        dataSource (str): Only the data source name.
+        ldaModalPath (str): The path on HDFS keeps the training model.
+    """
+    def __init__(self, data_source, topics):
+        assert data_source and isinstance(data_source, dict)
+        assert topics and isinstance(topics, int)
+        setting = {
+            'DATASOURCE': {'id': data_source['id'], 'name': data_source['name']},
+            'TOPICS': topics
+        }
+        super(AlgTraining_LDA, self).__init__(LogicAlgorithmId.LDA, setting)
+
+    def __init_result__(self, result):
+        assert result is not None and isinstance(result, dict)
+        final_result = {}
+        if len(result) > 0:
+            final_result = {
+                'dataSource': result['dataSource'],
+                'ldaModalPath': result['ldaModalPath']
+            }
+        super(AlgTraining_LDA, self).__init_result__(final_result)
+
+    @classmethod
+    def from_dict(cls, dict_obj):
+        assert dict_obj and dict_obj['setting']
+        setting = dict_obj['setting']
+        obj = cls(setting['DATASOURCE'], setting['TOPICS'])
+        result = dict_obj.get('result')
+        if result is not None:
+            obj.__init_result__(result)
+        return obj
 
 
 class UserFilter(dict):
@@ -863,3 +981,30 @@ class ER3(BaseApp):
         logic_id = logic['id'] if isinstance(logic, Logic) else int(logic)
         res = self.request_post('/logic/{0}/layout'.format(logic_id), layout)
         return Layout.from_dict(res)
+
+    def get_alg_trainings(self, group):
+        """ Get algorithm training results in a group.
+
+        Arguments:
+            group (obj or int): The emc.Group instance, ERGroup instance, or group id to get.
+        Return:
+            A list of AlgTraing instances.
+        """
+        assert group
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, ERGroup) else int(group)
+        res = self.request_get('/group/{0}/algtraining'.format(group_id))
+        return [AlgTraining.from_dict(x) for x in res]
+
+    def add_alg_training(self, group, alg_training):
+        """ Submit a algorithm training.
+
+        Arguments:
+            group (obj or int): The emc.Group instance, ERGroup instance, or group id to submit alg training.
+            alg_training (obj): The AlgTraining instance to submit.
+        Return:
+            A AlgTraining instance as the submitted one (with fields filled by server, e.g. createTime).            
+        """
+        assert group and alg_training and isinstance(alg_training, AlgTraining)
+        group_id = group['id'] if isinstance(group, Group) or isinstance(group, ERGroup) else int(group)
+        res = self.request_post('/group/{0}/algtraining'.format(group_id), alg_training)
+        return AlgTraining.from_dict(res)

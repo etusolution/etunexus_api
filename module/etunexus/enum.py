@@ -164,3 +164,12 @@ class LayoutTitleAlignment(object):
     CENTER = 'center'
     LEFT = 'left'
     RIGHT = 'right'
+
+
+class AlgTrainingState(object):
+    """ Enumeration of ER algorithm training state """
+    NA = 'N/A'
+    INIT = 'INIT'
+    RUNNING = 'RUNNING'
+    DONE = 'DONE'
+    FAILED = 'FAILED'
