@@ -73,6 +73,7 @@ class AlgInstance(dict):
         weight (int): The weight of the algorithm in the linear combination to the recommendation logic result.
         setting (obj): The setting depend on the concrete algorithm implementation.
 
+        qualifier (str): The unique internal id of algorithm instance.
         executeTime (long): Last execution/processing time in Epoch (milliseconds).
         executeState (str): Last execution status, refer to "LogicExecuteState" enum for valid values.
         successTime (long): Last success execution time in Epoch (milliseconds).
@@ -87,6 +88,7 @@ class AlgInstance(dict):
 
     def __init_general(self, dict_obj):
         self.update({
+            'qualifier': dict_obj.get('qualifier'),
             'executeTime': dict_obj.get('executeTime'),
             'executeState': dict_obj.get('executeState'),
             'successTime': dict_obj.get('successTime')
@@ -317,7 +319,7 @@ class Alg_SEARCH2CLICK(AlgInstance):
 
 class Alg_Info_Integrity(AlgInstance):
     """ Structure for item info integrity recommendation.
-    
+
     Fields:
         (As 'setting' in AlgInstance)
         id: Fixed "Info_Integrity"
@@ -397,14 +399,14 @@ class Alg_LDA(AlgInstance):
 
 class AlgTraining(dict):
     """ Structure for a algorithm training setting and result.
-    
+
     Fields:
         algId (str): The algorithm id, every derived algorithm should have its own id, refer to "LogicAlgorithmId" enum
         for samples but not limited.
         setting (obj): The setting depend on the concrete algorithm implementation.
         state (str): The training execution state, refer to "AlgTrainingState" enum for valid values.
         result (obj): The result depend on the concrete algorithm implementation.
-        
+
         id (int): The auto id.
         createTime (long): Create time in Epoch (milliseconds).
         updateTime (long): Update time in Epoch (milliseconds).
@@ -478,7 +480,7 @@ class AlgTraining_LDA(AlgTraining):
         (As 'setting' in AlgTraining)
         DATASOURCE (obj): An emc.DataSource instance, ERDataSource instance, or a dict instance with "id" and "name").
         TOPICS (int): The number of topics.
-        
+
         (As 'result' in AlgTraining)
         dataSource (str): Only the data source name.
         ldaModalPath (str): The path on HDFS keeps the training model.
@@ -1002,7 +1004,7 @@ class ER3(BaseApp):
             group (obj or int): The emc.Group instance, ERGroup instance, or group id to submit alg training.
             alg_training (obj): The AlgTraining instance to submit.
         Return:
-            A AlgTraining instance as the submitted one (with fields filled by server, e.g. createTime).            
+            A AlgTraining instance as the submitted one (with fields filled by server, e.g. createTime).
         """
         assert group and alg_training and isinstance(alg_training, AlgTraining)
         group_id = group['id'] if isinstance(group, Group) or isinstance(group, ERGroup) else int(group)
